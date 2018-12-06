@@ -1,0 +1,283 @@
+第4天#####################################################
+多表查询
+复制表
+作用1：备份表 
+    2：快数建表
+mysql> create table db4.user3 select * from db3.user;复制db3到db4.user里
+mysql> create table t2 select name,uid,shell from db3.user limit 3;
+mysql> create table t3 select name,uid,homedir from db3.user limit 5; 建两个表 t2 t3
+mysql> select * from t3 ;
+| name   | uid  | homedir        |
++--------+------+----------------+
+| root   |    0 | /root          |
+| bin    |    1 | /bin           |
+| daemon |    2 | /sbin          |
+| adm    |    3 | /var/adm       |
+| lp     |    4 | /var/spool/lpd |
++--------+------+----------------+
+
+#################################################################
+多表查询 查询结果=(t2*t3的输出结果) 笛卡尔集查询
+mysql> select * from t3,t2;
+mysql> select  t2.name,t2.uid,t3.* from t2,t3;
++--------+------+--------+------+----------------+
+| name   | uid  | name   | uid  | homedir        |
++--------+------+--------+------+----------------+
+| root   |    0 | root   |    0 | /root          |
+| bin    |    1 | root   |    0 | /root          |
+| daemon |    2 | root   |    0 | /root          |
+| root   |    0 | bin    |    1 | /bin           |
+| bin    |    1 | bin    |    1 | /bin           |
+| daemon |    2 | bin    |    1 | /bin           |
+| root   |    0 | daemon |    2 | /sbin          |
+| bin    |    1 | daemon |    2 | /sbin          |
+| daemon |    2 | daemon |    2 | /sbin          |
+| root   |    0 | adm    |    3 | /var/adm       |
+| bin    |    1 | adm    |    3 | /var/adm       |
+| daemon |    2 | adm    |    3 | /var/adm       |
+| root   |    0 | lp     |    4 | /var/spool/lpd |
+| bin    |    1 | lp     |    4 | /var/spool/lpd |
+| daemon |    2 | lp     |    4 | /var/spool/lpd |
++--------+------+--------+------+----------------+
+mysql> select  t2.name,t2.uid,t3.* from t2,t3 where t2.uid=t3.uid;
++--------+------+--------+------+---------+
+| name   | uid  | name   | uid  | homedir |
++--------+------+--------+------+---------+
+| root   |    0 | root   |    0 | /root   |
+| bin    |    1 | bin    |    1 | /bin    |
+| daemon |    2 | daemon |    2 | /sbin   |
++--------+------+--------+------+---------+
+
+#######################################################
+where子查询
+mysql> select name from db3.user where name in (select name from db4.t2); 查看db3里的名前提是db4.t2表里也得有
+
+左连接查询
+select 字段名列表 from 表a left join 表b on 条件表达式；以左边表为
+主显示查询结果
+右连接查询
+select 字段名列表 from 表a right join 表b on 条件表达式；以右边表为主显示查询结果
+mysql> create table db4.t4 select name,uid,shell,homedir from db3.user limit 8;
+mysql> create table db4.t5 select name,uid,shell,homedir from db3.user limit 12;
+mysql> select * from db4.t4;
+mysql> select * from db4.t5;
+mysql> mysql> select * from t4 left join t5 on t4.uid=t5.uid; 查找t4t5 uid一样的表小的在前面合理 左连接以左面为主显示
++----------+------+----------------+----------------+----------+------+----------------+----------------+
+| name     | uid  | shell          | homedir        | name     | uid  | shell          | homedir        |
++----------+------+----------------+----------------+----------+------+----------------+----------------+
+| root     |    0 | /bin/bash      | /root          | root     |    0 | /bin/bash      | /root          |
+| bin      |    1 | /sbin/nologin  | /bin           | bin      |    1 | /sbin/nologin  | /bin           |
+| daemon   |    2 | /sbin/nologin  | /sbin          | daemon   |    2 | /sbin/nologin  | /sbin          |
+| adm      |    3 | /sbin/nologin  | /var/adm       | adm      |    3 | /sbin/nologin  | /var/adm       |
+| lp       |    4 | /sbin/nologin  | /var/spool/lpd | lp       |    4 | /sbin/nologin  | /var/spool/lpd |
+| sync     |    5 | /bin/sync      | /sbin          | sync     |    5 | /bin/sync      | /sbin          |
+| shutdown |    6 | /sbin/shutdown | /sbin          | shutdown |    6 | /sbin/shutdown | /sbin          |
+| halt     |    7 | /sbin/halt     | /sbin          | halt     |    7 | /sbin/halt     | /sbin          |
++----------+------+----------------+----------------+----------+------+----------------+----------------+
+mysql> select * from t4 right join t5 on t4.uid=t5.uid; 以右连接为主显示 没有的用null显示
++----------+------+----------------+----------------+----------+------+----------------+-----------------+
+| name     | uid  | shell          | homedir        | name     | uid  | shell          | homedir         |
++----------+------+----------------+----------------+----------+------+----------------+-----------------+
+| root     |    0 | /bin/bash      | /root          | root     |    0 | /bin/bash      | /root           |
+| bin      |    1 | /sbin/nologin  | /bin           | bin      |    1 | /sbin/nologin  | /bin            |
+| daemon   |    2 | /sbin/nologin  | /sbin          | daemon   |    2 | /sbin/nologin  | /sbin           |
+| adm      |    3 | /sbin/nologin  | /var/adm       | adm      |    3 | /sbin/nologin  | /var/adm        |
+| lp       |    4 | /sbin/nologin  | /var/spool/lpd | lp       |    4 | /sbin/nologin  | /var/spool/lpd  |
+| sync     |    5 | /bin/sync      | /sbin          | sync     |    5 | /bin/sync      | /sbin           |
+| shutdown |    6 | /sbin/shutdown | /sbin          | shutdown |    6 | /sbin/shutdown | /sbin           |
+| halt     |    7 | /sbin/halt     | /sbin          | halt     |    7 | /sbin/halt     | /sbin           |
+| NULL     | NULL | NULL           | NULL           | mail     |    8 | /sbin/nologin  | /var/spool/mail |
+| NULL     | NULL | NULL           | NULL           | operator |   11 | /sbin/nologin  | /root           |
+| NULL     | NULL | NULL           | NULL           | games    |   12 | /sbin/nologin  | /usr/games      |
+| NULL     | NULL | NULL           | NULL           | ftp      |   14 | /sbin/nologin  | /var/ftp        |
++----------+------+----------------+----------------+----------+------+----------------+-----------------+
+#############################################################
+MYSQL 管理工具
+phpmyadmin
+scp 个包
+安包 httpd mysql php-mysql
+起服务httpd
+解压phpfig.inc.php 路径/var/www/html
+#tar -xf phpMyAdmin-2.11.11-all-languages.tar.gz -C /var/www/html
+#cd /var/www/html 
+#mv phpMyAdmin-2.11.11-all-languages/ phpmyadmin 该个名
+#chown -R apache.apache phpmyadmin/ 加权限
+#cd phpmyadmin
+#ls config.sample.inc.php 
+#cp config.sample.inc.php  config.inc.php 改个名就是配置文件
+#vim config.inc.php
+17 $cfg['blowfish_secret'] = '111'; 不能为空
+31 $cfg['Servers'][$i]['host'] = 'localhost'; localhost代表本机 以访问数据库默认访问(文件没在同一主机上需要加ip)
+#firefox httpd://192.168.4.50/phpmyadmin 
+############################################################
+用户授权及权限撤销
+密码恢复及设置
+#mysqladmin -hlocalhost -uroot -p password   "654321"
+#mysql -uroot -p654321
+#mysql stop mysqld
+#vim /etc/my.cnf
+[mysqld]
+skip-grant-tables
+secure_file_priv=/mydata
+default-storage-engine=myisam
+#validate_password_policy=0
+#validate_password_length=6
+# systemctl restart mysqld
+
+# mysql -uroot -p654321
+mysql> update mysql.user set authentication_string=password("123456")  where user="root" and host="localhost";
+mysql> flush privileges;刷新
+mysql> quit
+
+#mysql stop mysqld
+#vim /etc/my.cnf
+[mysqld]
+#skip-grant-tables
+secure_file_priv=/mydata
+default-storage-engine=myisam
+validate_password_policy=0
+validate_password_length=6
+#mysql start mysqld
+##########################################################333
+创建授权
+grant配置授权 grant all 所有权限  grant select,insert 只有查 插入权限
+grant 权限列表 on 数据库名.表名 to 用户名@"客户端地址" identified by "密码" [whith grant option];
+myaql>  grant all on db3.* to admin@"localhost" identified by "123456";
+mysql> grant select,insert,update(name,uid) on db4.user3 to webadmin2@"192.168.4.%" identified by "123456";
+*.*所有库所有表拥有完全权限
+#mysql -uadmin -p123456
+mysql> select user();  查看登陆用户
+mysql> show grants;   查看权限
+mysql> grant all on *.* to root@"%" identified by "123456"  with grant option;
+#mysql -h192.168.4.50 -uroot -p123456
+
+
+客户端地址
+%所有主机能ping通
+192.168.1.% 指定一个网段
+192.168.1.1 指定一个ip
+%.tarena.com 匹配一个域名
+svr1.tarena.com 匹配指定域名的单个主机
+###########################################################
+撤销权限
+revoke 权限列表 on 库名.表名 from 用户@"客户端地址";
+mysql> select host,user from mysql.user; 查以授权的用户
++---------------+-----------+
+| host          | user      |
++---------------+-----------+
+| %             | root      |
+| 192.168.4.%   | webadmin2 |
+| 192.168.4.254 | webadmin  |
+| localhost     | admin     |
+| localhost     | mysql.sys |
+| localhost     | root      |
++---------------+-----------+
+
+mysql> show grants for webadmin2@"192.168.4.%";查看授权权限
++----------------------------------------------------------------------------------------+
+| Grants for webadmin2@192.168.4.%                                                       |
++----------------------------------------------------------------------------------------+
+| GRANT USAGE ON *.* TO 'webadmin2'@'192.168.4.%'                                        |
+| GRANT SELECT, INSERT, UPDATE (uid, name) ON `db4`.`user3` TO 'webadmin2'@'192.168.4.%' |
++----------------------------------------------------------------------------------------+
+
+撤销授权权限
+mysql> show grants for root@"%"; 查看权限
++-------------------------------------------------------------+
+| Grants for root@%                                           |
++-------------------------------------------------------------+
+| GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION |
++-------------------------------------------------------------
+
+mysql> revoke grant option on *.* from root@"%"; 撤销授权权限
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> show grants for root@"%"; 查看权限
++-------------------------------------------+
+| Grants for root@%                         |
++-------------------------------------------+
+| GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' |
++-------------------------------------------+
+mysql> revoke all on *.* from root@"%"; 撤销所有权限
+mysql> show grants for root@"%";
++----------------------------------+
+| Grants for root@%                |
++----------------------------------+
+| GRANT USAGE ON *.* TO 'root'@'%' |
++----------------------------------+
+mysql> drop user root@"%"; 删除用户
+mysql> select host,user from mysql.user;
++---------------+-----------+
+| host          | user      |
++---------------+-----------+
+| 192.168.4.%   | webadmin2 |
+| 192.168.4.254 | webadmin  |
+| localhost     | admin     |
+| localhost     | mysql.sys |
+| localhost     | root      |
++---------------+-----------+
+
+授权用户自己修改密码
+mysql> set password=password(新密码)；
+管理员改授权用户密码
+mysql> set password for 用户名@"客户端地址"=password(新密码);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

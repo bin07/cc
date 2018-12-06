@@ -1,0 +1,239 @@
+use  db2;
+create table t3( name char(10) not null);
+mysql> insert into  t3  values("");
+
+mysql> insert into  t3  values("null");
+mysql> insert into  t3  values(null);
+
+
+create table t4 ( 
+name char(10) not null,
+age tinyint not null default  25,
+likes set("eat","sleep","game","zhang") 
+default "eat,sleep" );
+
+insert into   t4(name)values("bob");
+select  * from  t4;
+insert into  t4 values("tom",30,"zhang");
+
+mysql> alter table t4 
+    -> add email  varchar(30) default "stu@tedu.cn",
+    -> add tel    char(11);
+
+mysql> alter table  t4
+    -> add  stu_num  char(9) first;
+
+mysql> alter table  t4 add  class char(7) 
+default "nsd1808" after name;
+
+desc  t4;
+select  *  from t4;
+
+alter table t4  modify  stu_num varchar(10);
+
+alter table   t4 modify  age tinyint default 25;
+
+alter table  t4 modify age tinyint default 25 
+after name;
+
+mysql> alter table  t4  modify  
+likes set('eat','sleep','game','zhang',"it","book")
+null  default "it,book";
+
+desc  t4;
+select  * from t4;   休息到 11：10
+
+alter table   t4  
+change  email mail 
+varchar(30) default  "stu@tedu.cn";
+
+alter table   t4 drop mail , drop  class;
+select  * from  t4;
+desc  t4;
+
+alter table  t4 rename stutab;
+select  * from stutab;
+desc t3;
+create index name on t3(name);
+desc  t3;
+show index from  t3;
+drop  index  name  on t3\G;
+
+create table t4 (
+name char(10) not null,
+age tinyint not null default  25,
+likes set("eat","sleep","game","zhang")
+default "eat,sleep",
+index(name),index(age)
+);
+desc  t4;
+show index from  t4\G;  练习10分钟到14:16
+mysql> drop  index age  on t4;
+
+desc  t4;
+show index from  t4\G;
+
+mysql> create table t5(
+    -> name char(5),
+    -> class char(7),
+    -> stu_num char(9),
+    -> primary key(stu_num)
+    -> );
+mysql> desc  t5;
+mysql> drop  table t5;
+mysql> create table  t5(
+name char(5), 
+class char(7),
+stu_num char(9) primary key
+);
+mysql> desc  t5;
+
+mysql> insert into  t5  
+values(null,"nsd1808","nsd180801");
+
+mysql> insert into  t5  
+values("bob","nsd1808","nsd180801");
+
+mysql> insert into  t5  
+values("bob","nsd1808","nsd180803");
+
+
+
+
+mysql> insert into  t5  values(null,"nsd1808","nsd180801");
+Query OK, 1 row affected (0.02 sec)
+
+mysql> insert into  t5  values("bob","nsd1808","nsd180801");
+ERROR 1062 (23000): Duplicate entry 'nsd180801' for key 'PRIMARY'
+mysql> 
+mysql> 
+mysql> insert into  t5  values("bob","nsd1808","nsd180803");
+
+
+mysql> create  table  t6(
+    -> clientip  char(15),
+    -> serport   smallint unsigned,
+    -> status    enum("allow","deny"),
+    -> primary key(clientip,serport)
+    -> );
+Query OK, 0 rows affected (0.15 sec)
+
+mysql> desc t6;
+insert into  t6  values("1.1.1.1",22,"deny");
+
+insert into  t6  values("1.1.1.1",21,"allow");
+
+insert into  t6  values("2.1.1.1",21,"deny");
+
+删除主键
+mysql> alter  table  t6  drop  primary key;
+mysql> desc  t6;
+
+alter table  t5 drop  primary key;
+desc  t5;
+
+在已有表里创建主键
+mysql>alter table  t6 
+add  primary key(serport,clientip);
+
+mysql> alter table t5 add primary key(stu_num);
+++++++++++++++++++++++++++++++
+与 AUTO_INCREMENT 连用 让字段的值自动增长 
+   数值类型
+   必须是primary key
+mysql> create table t7(
+    -> id int  primary key auto_increment,
+    -> name char(10),
+    -> age tinyint
+    -> );
+mysql> desc  t7;
+mysql> insert into  t7(name,age)values("bob",19);
+mysql> insert into  t7(name,age)values("tom",19);
+mysql> insert into  t7(name,age)values("lucy",19);
+mysql> select  * from  t7;
+++++++++++++++++++++++++++++
+foreign key外键
+
+外键使用规则？
+
+mysql> create  table yg(
+    -> yg_id int primary  key  auto_increment,
+    -> name char(10)
+    -> )engine=innodb;
+
+mysql> insert into yg(name) values("bob");
+
+mysql> insert into yg(name) values("tom");
+
+mysql> select  * from  yg;
+
+创建外键
+mysql> create table gz(
+    -> gz_id int,
+    -> pay  float(7,2),
+    -> foreign key(gz_id) references yg(yg_id)
+    -> on update cascade on delete cascade
+    -> )engine=innodb;
+
+mysql> show  create table gz;
+
+休息10分钟到 17:05
+
+测试外键
+mysql> insert into gz values(1,45000);
+mysql> insert into gz values(2,25000);
+mysql> select  * from  gz;
+mysql> insert into gz values(3,25000);
+mysql> insert into yg(name)values("jack");
+mysql> select  * from yg;
+mysql> insert into gz values(3,25000);
+mysql> select  * from gz;
+
+++++++++++++++++++++++++++++++++++
+mysql> delete from yg where yg_id=1;
+mysql> select  * from yg;
+mysql> select  * from gz;
+
+mysql> update yg set yg_id=8 where yg_id=2;
+mysql> select  * from yg;
+mysql> select  * from gz;
+
+mysql> alter table gz add primary key(gz_id);
+mysql> insert into  gz values(8,55000);
+mysql> insert into  gz values(3,55000);
+mysql> insert into  gz values(null,55000);
+mysql> insert into  gz values(1,55000);
+
+删除外键
+mysql>
+alter table gz drop foreign key gz_ibfk_1;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

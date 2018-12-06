@@ -1,0 +1,486 @@
+19、配置iSCSI服务器
+20、配置iSCSI客户端
+iSCSI，网络磁盘		千兆以太网
+软件包（S）：targetcli
+软件包（C）：iscsi-initiator-utils
+
+后端存储 backstore：
+    服务端实际提供的存储设备（磁盘、分区、文件.. ..）
+ISCSI 存储对象：
+    软件逻辑上定义的一个网络磁盘target
+LUN 逻辑单元：
+    软件逻辑上定义的到后端存储的一个映射
+IQN名称（ISCSI Qualified Name）：
+     iqn.yyyy-mm.反序区域名:自定义标记
+
+如何发布一个ISCSI磁盘 ——
+1. 定义一个后端存储设备
+2. 创建一个ISCSI对象（IQN名称）
+        iqn.2016-02.com.example:server0
+3. 为ISCSI对象添加LUN对应到后端存储 【luns】
+4. 为ISCSI对象指定允许访问的客户机标识（IQN名称） 【acls】
+        iqn.2016-02.com.example:desktop0
+5. 为ISCSI对象指定监听的地址、端口 【portals】
+
+如何访问一个ISCSI磁盘 ——
+1. 准备工作（初始化、引爆）
+1）为客户机标识IQN名称
+    # vim  /etc/iscsi/initiatorname.iscsi
+    InitiatorName=本机的IQN名称
+    # systemct  restart  iscsi
+2）查找ISCSI磁盘
+    iscsiadm  -m  discovery  -t  st  -p  服务器地址
+3）连接ISCSI磁盘
+    iscsiadm  -m  node  -T  ISCSI磁盘的IQN名称  -l
+			【-l、-u、-o  delete】
+2. 使用磁盘
+识别、分区、格式化、挂载
+
+
+iSCSI磁盘的开机自动连接：
+# vim  /var/lib/iscsi/nodes/..../default
+//查找startup
+node.conn[0].startup = automatic
+
+# systemctl  enable  iscsi   iscsid
+
+
+问题（当前版bug）：iSCSI客户机配好之后，重启或关机会卡死
+解决：sync ;  poweroff  -f
+
+# vim  /etc/bashrc
+.. ..
+alias  reboot='sync ; reboot -f'
+#####################################################
+
+本地存储： 
+  IDE、SATA、SCSI、SAS磁盘
+网络存储：
+  主机系统程序==》Internet网络==》iSCSI磁盘（其他主机上）
+
+Linux主机如何提供一个iSCSI网络存储？——iSCSI服务端
+1）前提：准备空闲的物理存储设备（磁盘/分区）
+#fdisk  /dev/vdb
+#partprobe /dev/vdb
+
+软件包：targtcli
+配置工具：targetcli
+系统服务:target
+#yum -y install targetcli
+
+2）命名backstore：后端存储，为我们实际的物理存储设备起的逻辑的名称。
+
+/backstores/block create 后端存储名 实际物理存储设备路径
+#targetcli
+> /backstores/block create disk1  /dev/vdb1
+>/backstores/block delete disk1
+
+3）创建一个target：包含多个磁盘设备的逻辑磁盘柜，作为客户机访问的对象。
+>/iscsi  create 磁盘名
+>/iscsi  create  iqn.2016-02.com.example:server0
+
+4）配置磁盘柜（luns【逻辑单元】、acls【给谁用】、portals【访问磁盘柜，通过哪个IP、哪个端口】）
+>/iscsi/iSCSI磁盘名<TAB>.../luns create /backstores/block/后端存储名
+>/iscsi/iSCSI磁盘名<TAB>..../acls  create 客户端的IQN标记
+>/iscsi/iSCSI磁盘名<TAB>...../portals create 本机IP地址  [端口 ]
+
+> /iscsi/iqn.2016-02.com.example:server0/tpg1/luns create /backstores/block/disk1 
+> /iscsi/iqn.2016-02.com.example:server0/tpg1/acls  create  iqn.2016-02.com.example:desktop0
+> /iscsi/iqn.2016-02.com.example:server0/tpg1/portals  create 172.25.0.11
+> exit
+
+
+关于IQ命名规范（ISCSI Qualified Name）：
+iqn.yyyy-mm.倒序域名:自定义标记
+
+适用于ISCSI网络存储、acls指定的客户机标记
+
+Linux主机如何连接一个iSCSI网络存储——iSCSI客户机
+
+客户端访问
+软件包：iscsi-initiator-utils
+管理工具：iscsiadm
+系统服务：iscsid（加载客户端IQN标记）、iscsi（识别并连接iSCSI设备）
+
+# rpm -qa| grep  iscsi*
+#yum -y install  iscsi-initiator-utils
+#vim /etc/iscsi/initiatorname.iscsi
+InitiatorName=客户机的IQN名称
+InitiatorName=iqn.2016-02.com.example:desktop0
+#systemctl restart iscsid
+
+发现iSCSI存储设备
+#iscsiadm -m discovery -t  sendtargets -p 服务器地址
+sendtargets可简写为st
+#iscsiadm -m discovery -t  sendtargets -p 172.25.0.11
+
+连接iSCSI存储设备
+#iscsiadm -m node  -T iSCSI设备的iqn名称 -l  【-u】
+或者
+#iscsiadm -m node -L all   【-U】  
+
+配置自动连接已经发现过的iSCSI存储设备：
+#vim /var/lib/iscsi/nodes.....<tab>
+把第二个startup的值改为automatic
+node.conn[0].startup=automatic
+#systemctl enable iscsi
+
+
+测试iSCSI设备的链接结果：
+#lsblk
+
+分区、格式化、挂载
+#fdisk /dev/sda
+n p e +2100M w
+#partprobe /dev/sda
+#mkfs.ext4 /dev/sda1
+#mkdir /mnt/data
+#vim /etc/fstab
+/dev/sda1 /mnt/data ext4 _netdev 0 0 
+#mount -a
+#df -Th /mnt/data
+
+关于iSCSI设备在/etc/fstab中的挂载
+#blkid /dev/sda1 
+UUID=.....  【UUID是文件系统被格式化的时候生成的】
+
+关于iSCSI客户机重启死机的问题。
+reboot关机卡死
+解决办法： sync;reboot -f 代替reboot命令
+#vim /etc/bashrc
+......
+alias  reboot=‘ sync;reboot -f ’
+#source   /etc/bashrc
+
+
+七、配置及管理数据库 ——
+21. 配置一个数据库
+22. 数据库查询（填空）
+
+数据表：存放关系型的一些记录（很多属性）
+	一个实体：每一行（记录）、不同列（属性）
+数据库：存放存在相互关系的大量的数据表
+数据库系统（服务器）：提供数据库存储和相关管理的一套软件
+
+
+常见的数据库系统软件：
+    甲骨文：Oracle、MySQL
+    MicroSoft：SQL Server
+    DB2、PostgreSQL
+    MariaDB：mariadb-server、mariadb
+
+*rhel7中的mariadb相关包
+   -- mariadb-server：提供服务端有段的系统程序
+   --端口：3306
+1.安装mariadb-server数据库软件
+#yum -y install  mariadb-server
+2.启动mariadb服务
+#systemctl restart mariadb
+#systemctl enable mariadb
+#netstat -anput | grep 3306
+
+#mysql  //本地无密码登录
+一旦你进入到mysql中，输入linux的命令都无法使用。
+
+数据库操作语句的特点：
+1） 不区分大小写
+2.）每一条语句需要以 ; 表示结束
+3）不支持tab键
+
+数据库操作 ——
+查看库：SHOW  DATABASES;
+创建库：CREATE  DATABASE  数据库名;
+删除库：DROP  DATABASE  数据库名;
+选择库：USE  数据库名;
+退出数据库：quit
+~~~~~
+
+*为数据库账号修改密码
+--mysqladmin [-u用户名] [-p旧密码] password ‘新密码’
+数据库管理员为root 但与系统用户root没有关系【用户信息存放的位置也不一样】
+#mysqladmin -uroot  -p password 'atenorth'
+#mysql -uroot -patenorth  //免交互登录
+#mysql -uroot  -p
+密码：
+
+如果密码忘记：
+#rm -rf /var/lib/mysql 
+#yum remove mariadb-server
+
+*禁止监听，只服务于本机
+#vim /etc/my.cnf     //数据库的主配置文件
+[mysqld]
+skip-networking          //跳过网络监听
+#systemctl restart  mariadb
+
+查看表：#show tables；
+查看表结构#desc  表名
+
+
+wget http://classroom/pub/materials/users.sql
+*导入/恢复到数据库
+无论备份还是恢复，都要验证用户及权限
+备份操作：
+——mysqldump  源库名 >  xxxx.sql
+恢复操作：
+——mysql [-u用户]  [-p密码] 数据库名  < 备份文件
+# mysql -uroot -p  nsd  < users.sql 
+#MariaDB[nsd]>use  nsd;
+#MariaDB[nsd]>show tables;
+~~~~~~~~~~~~~~~~~~~~
+查询操作：
+格式1：
+——select 字段1,......，字段N from 表名;
+格式2：
+——select 字段1,,......,字段N from 表名  where 条件表达式； //符合条件的记录才被操作
+注意事项：
+1.使用*可匹配所有字段
+2.指定表名时，可采用 库名.表名 的形式
+
+#mysql -uroot -patenorth
+MariaDB [(none)]> select * from nsd.base;
+MariaDB [(none)]> select id,name from nsd.base;
+MariaDB [(none)]> select id,name from base;
+ERROR 1046 (3D000): No database selected
+MariaDB [(none)]> use nsd;
+MariaDB [(none)]> select id,name from base;
+两张表对比  多表查询
+MariaDB [(none)]>select name from base where password='solictous';
+~~~~~~~~~
+授权
+需不需要创建一个普通的用户呢？
+——grant 权限列表  on  库名.表名 to  用户@客户机地址  identified by ‘密码’;
+权限列表：
+all：代表所有权限
+insert ,update，select.....
+客户机地址：
+%：匹配所有主机
+192.168.1.%：匹配一个网段
+192.168.1.1：匹配指定IP地址的单个主机
+svr1.tarena.com：匹配指定域名的单个主机
+MariaDB [(none)]> grant select on nsd.* to haha@'localhost'  identified by "123";
+//当haha用户从本地localhost登录，输入密码是123，将会获得库nsd所有表的查询权限
+MariaDB [(none)]> select host,user,password  from mysql.user;
+//查看MariaDB数据库中，用户表信息
+登录haha用户进行测试。除查询外的其他权限。
+
+MariaDB [(none)]>select name from base where password='solicitous' and id='3' ;
+MariaDB [(none)]>MariaDB [nsd]> select * from base where name='Barbara' or id='3';
+
+有（）人的姓名是Barbara 同时住在Sunnyvale？
+MariaDB [(none)]>select * from base,location where base.name='Barbara' and location.city='Sunnyvale' and  base.id=location.id;
+MariaDB [(none)]>select count(*) from base,location where base.name='Barbara' and location.city='Sunnyvale' and  base.id=location.id;
+
+1.禁止空密码登录
+MariaDB [(none)]> select host,user,password  from mysql.user;
+MariaDB [(none)]> select host,user,password  from mysql.user where password='' ;
+MariaDB [(none)]>  delete  from mysql.user where password='';
+
+
+
+
+六、Shell脚本编程 —— 
+17. 创建一个脚本
+
+shell：用来接收使用者输入的指令，然后将指令解译成核心能够了解的方式，传给核心去执行，核心执行后，再将结果传回至默认的输出周边。
+
+脚本：可以执行的文件，运行后可以实现某种功能。[命令的堆积]
+可以把我们想要执行的任务都做了，结合周期性任务。
+
+#vim  /root/haha.sh
+  useradd test01 
+  passwd test01
+普通文件，默认没有可执行权限。为了安全。
+#ls -l /root/haha.sh
+#/root/haha.sh
+要尽量做到非交互，高效，便捷。
+echo 123 | passwd  --stdin  test02
+
+#!/bin/bash是指此脚本使用/bin/bashl的路径.脚本的内容是由解释器解释的，我们可以用各种各样的解释器来写对应的脚本。
+#cat /etc/shells
+
+#vim /root/haha.sh
+ echo hello word
+ cat /etc/redhat-release
+
+
+
+二 重定向输出
+管道：使用| 将前一条命令的标准输出交给后一条命令处理
+
+1 标准输出（/dev/stdout）：命令行执行成功的显示信息
+2 标准错误（/dev/stderr）：命令行执行出错的显示信息
+
+重定向标准输出：
+     命令行  >  文件、命令行  >>  文件、
+重定向标准错误：
+     命令行  2>  文件、命令行  2>>  文件、
+混合重定向：
+     命令行  &>  文件
+将标准输出变成标准错误：
+     命令行  >&2
+将标准错误变成标准输出：
+     命令行  2>&1
+
+变量：为了增加脚本的适用环境的能力，增加脚本的灵活度。以不变的名称，储存变化的值。
+变量名=变化的值
+
+#a=100
+#echo $a
+#a=200
+#echo $a
+
+定义/复制变量
+1.若指定的变量已存在，相当于为此变量重新赋值
+2.等号两边不要有空格
+3.变量名由字母数字下划线组成，区分大小写
+4.变量名不能以数字开头，不能使用关键字和特殊字符
+引用变量值：$变量名
+查看变量值：echo $变量名 、echo ${变量名}
+
+环境变量（定制用户环境参数）：USER、PATH、HOME、PWD、SHELL、LOGNAME、……
+echo $USER
+位置变量(在执行脚本时提供命令行参数）：$1、$2、……、${10}、……
+#vim  /root/one.sh
+ cat  -n $1 | head $2
+
+预定义变量(用来保存脚本程序的执行信息)：
+$#：已加载的位置变量的个数
+$*：所有位置变量的值
+$?：判断上一次执行的命令是否成功，成功为0 不成功为非0.
+
+条件测试操作 ——
+依据 $?：表示前一条命令退出的状态值（0 成功，非0 失败）
+
+
+
+测试的方式：
+    任何一条命令行
+    test  测试表达式
+    [  测试表达式  ]
+
+常见的测试选项：
+    文件状态检测 
+ -f：文档存在且为文件为真
+-d：文档存在且为目录为真
+-e：文档存在为真
+-r：文档存在且有读取权限为真
+-w：文档存在且有写入权限为真
+-x：文档存在且有执行权限为真
+#[ -e  /etc/]
+#[ -d /etc/passwd ]
+#[-f  /etc/passwd ]
+
+    整数值比较（带e的都有等于，g代表大于，l代表小于）  
+-gt：大于
+-ge：大于等于
+-eq：等于
+-ne：不等于
+-lt：小于
+-le：小于等于
+    字符串比较  ==、!=
+#[ $USER == 'student' ]
+    取反操作  !
+#[ root == studennt ]
+
+#[ 100 -gt 50]
+#echo $?
+
+if单分支处理
+当条件满足时，做xx处理
+if  条件测试；then
+    命令序列xx
+fi
+
+if双分支处理：当条件满足/不满足，分别作xx,yy处理
+if  条件测试操作 
+then
+     命令序列xx
+else
+     命令序列yy
+fi
+
+#vim haha.sh
+read -p '请输入一个IP地址：'  IP
+ping -c 2 $IP   > /dev/null
+if [ $? -eq 0 ];then
+  echo $IP ok
+else
+  echo $IP on
+fi
+
+
+
+三分支if选择结构 ——
+当条件1满足时，作xx处理；否则继续检查条件2，若成立作yy处理，否则，作zz处理。
+if  条件测试操作1
+then
+     命令序列xx..
+elif  条件测试操作2
+then
+     命令序列yy...
+else
+     命令序列zz...
+fi
+
+成绩
+大于等于90  优秀
+大于等于80 良好
+大于等于70 及格
+大于等于60 仍需努力
+
+#vim cheng.sh
+read -p  "请输入您的成绩"  num
+
+if [ $num -gt 100 ];then
+  echo '成绩有误'
+elif [ $num -ge 90 ];then
+  echo 优秀
+elif [ $num -ge 80 ];then
+  echo 良好
+else
+    echo   仍需努力
+fi
+
+
+#!/bin/bash
+if [ "$1" = "redhat" ] ; then
+echo "fedora"
+elif [ "$1" = "fedora" ] ; then
+echo "redhat"
+else
+echo "/root/foo.sh redhat|fedora" >&2
+fi
+
+#!/bin/bash
+if [ $# -eq 0   ];then
+  echo '/root/foo.sh redhat|fedora'  >&2
+elif [ "$1" = "redhat" ] ; then
+  echo "fedora"
+elif [ "$1" = "fedora" ] ; then
+  echo "redhat"
+else
+   echo '/root/foo.sh redhat|fedora'
+fi
+脚本的退出状态值 ——
+      退出之前最后一条命令的 $? 值
+      exit  整数值
+
+
+列表式循环
+for循环结构：反复执行类似的操作，使重复性的工作做的简单。
+for  变量名  in  值1  值2  值3 .. ..
+do
+        命令序列（$变量名）
+done
+
+for  第一个献血人  in  张三  李四  王五 .. ..
+do
+        为第一个献血人采血
+done
+
+使用$（命令行）操作
+-先执行括号内的命令行，提取次命令行的标准输出
+-然后将标准输出结果替换整个$()表达式
+-可以作为参数嵌入到其他命令行
+#mkdir $(date +%F)

@@ -1,0 +1,153 @@
+
+如果要删库
+rpm -e --nodeps mariadb-server
+rpm -e --nodeps mariadb
+rm -rf /etc/my.cnf
+rm -rf /var/lib/mysql/*
+
+软件包下载mysql
+端口号 3306
+/var/lib/mysql 数据库目录
+进程明 mysqld
+传输协议 tcp
+进程所有者所属组 mysql
+进程 # ps -aux | grep -i mysqld
+初始化文件/var/lib/mysql
+配置文件 /etc/my.conf
+DDL 数据定义语言 （create,alter,drop）
+DML 数据操作语言 (insert,update,delete)
+DCL 数据控制语言 (grant,revoke)
+DTL 数据事物语言 (commit,rollback,savepoint)
+
+数据库命名要求
+可以使用数字/字母/下划线/。但是不能纯数字
+区分大小写，具有唯一性
+不可使用指令关键字，特殊字符
+
+desc 表明； //查看表结构
+select * from 表名； //查看表记录
+drop table 表名； //删除表
+select * from 表名； //查看表记录
+insert into 表名 values（值列表）； //插入表记录
+update 表名 set 字段=值； //修改表记录
+delete from 表名； //删除表记录
+select database() //查看所在库
+show datavases; //显示已有库
+ues 库名； //
+select database(); //显示当前所在的库
+create database 库名； //创建新库
+show tables; //显示已有库
+drop database 库名 //删除库
+create table 库名. 表名 （字段名1 字段类型（宽度）约束条件，字段名2 字段类型（宽度）约束条件，字段名N 字段类型（宽度）约束条件）； //创建指定名称表
+
+
+
+
+安装mysql
+#tar -xf mysql-5.7.17.tar 
+# rpm -Uvh mysql-community-*.rpm //升级安装
+# yum -y install perl-JSON 		//需要的依赖包
+# rpm -Uvh mysql-community-*.rpm //升级安装
+#rpm -qa | grep -i mysql	
+#ps -C mysqld //查看进程
+#systemctl restart mysqld //重起服务
+#systemctl enable mysqld	  //开机自起
+# systemctl status mysqld //查看服务状态
+#grep password /var/log/mysqld.log //查看初始密码
+# mysql -hlocalhost -uroot -p'3GEMfrzqY1.o' // 初始密码登陆
+mysql -hlocalhost -uroot -p"Mysql..1" 进入库 添加选项 --auto-rehash
+
+设置mysql密码 
+>alter user root@"localhost" identified by "Mysql..1"
+>show databases; 查看库
+修改密码策略
+>show variables like "%password%"
+>set global validate_password_policy=0
+>set global validate_password_length=6
+永久配置修改配置文件在/etc/my.conf
+在mysql下面添加
+>validate_password_policy=0
+>validate_password_length=6
+设置新密码 可是简式
+alter user root@"localhost" identified by "123456";
+
+查看所有表
+select * from studb.stuinfo;
+插入表记录
+>insert into studb.stuinfo values("bob",21),("tom",23);
+修改表记录
+ >update stuinfo set age=19 where name="bob"; //修该bob年龄
+ >update stuinfo set age=18 ；   //所有人的年龄
+ >select * from studb.stuinfo;
+删除所有表记录
+ >delete from studb.stuinfo where name="tom"; //删除studb.stuinfo里tom
+ >delete from studb.stuinfo ; //删除studb.stuinfo表里所有
+ >select * from studb.stuinfo;
+ 
+汉字库
+》create table 学生库 (姓名 char(3),年龄 int) DEFAULT CHARSET=utf8; 
+ 	//创建汉字库，指定字符集
+》insert into 学生库 values ("张三",19);   //写入
+》select * from 学生库    //查看
+
+数字型
+》create table t1(age tinyint unsigned,pay float(7,2) ); //创建表7个数字，其中两个为小数
+》insert into t1 values(19,28000); //写入，四舍五入法
+》select * from t1; //查看表内容
+》desc t1； //查看表结构
+
+>create table t2 (level tinyint); //
+>insert into t2 values(-128); // 最小数
+>insert into t2 values(127); //最大数
+>select * from t2; //查看
+
+字符类型
+>create table t3( name char(3), homedir varchar(15), email varchar (30));
+>insert into t3 values ("bob","beijing","bob@163.com");
+>select * from  t3;
+
+
+时间类型
+>create table t4( name char(10), birthday date, start year, upwork time, party datetime); //创建
+>desc t4; //查看
+>insert into t4 values("bob",20181120,1990.083000,20181118203000); //写入
+				名字  年月日	  年	时分秒	约会时间年月日时分秒
+>select * from t4; //查看
+
+时间函数
+>select now()；		 // 获取当前的年月日时分秒
+>select time(now());      //获取当前的时间
+>select date(now());	 //获取当前的年月日
+>select year(now()); 	//获取当前的年
+>select curdate(); 	//直接获取当前的日期
+>select month(now());	//获取当前的月
+
+>insert into t4 values ("tom",date(now()),year(now()),time(now()),now());
+		写入t4库内容如下
+tom  | 2018-11-16 |  2018 | 17:30:29 | 2018-11-16 17:30:29 |
+
+名字 	    年月日	    年	     时分秒        约会时间年月日时分秒
+
+枚举类型
+
+>create table t5( name char(10), likes set("eat","sleep","game","film"), sex enum("boy","girl","no")); ///创建表
+
+>desc t5; //查看表结构
+>insert into t5 values("bob","eat,sleep","boy"); //写入
+>select * from t5; //查看内容
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

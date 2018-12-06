@@ -1,0 +1,458 @@
+################################################
+虚拟机A：
+ 1.   永久IP地址设置：192.168.4.10/24
+ 2.   设置永久主机名：svr10.tedu.cn
+ 3.   搭建本地的Yum仓库
+
+虚拟机B：
+ 1.   永久IP地址设置：192.168.4.20/24
+ 2.   设置永久主机名：pc20.tedu.cn
+ 3.   搭建本地的Yum仓库
+
+##################################################
+
+for循环
+
+  for  变量    in   列表值
+   do 
+          重复执行的代码
+   done
+
+[root@svr10 opt]# vim /opt/for01.sh
+ #!/bin/bash
+ for  i  in  1 2 3
+ do
+   echo hello
+ done
+
+[root@svr10 opt]# vim /opt/for02.sh
+ #!/bin/bash
+ for  i  in  1 2 3
+ do
+   echo hello$i
+ done
+
+[root@svr10 opt]# chmod +x /opt/for02.sh
+
+###################################################
+ c-for风格语句
+ 
+[root@svr10 opt]# cat /opt/for03.sh
+ #!/bin/bash
+ for ((i=1;i<=10;i++))
+ do
+   echo hello$i
+ done
+
+####################################################
+
+循环创建10个用户
+[root@svr10 opt]# cat  /opt/for04.sh 
+ #!/bin/bash
+ for i in {1..10}
+ do
+   useradd test$i
+   echo test$i ok
+ done
+
+
+造数工具：  {1..10}   起始位置与结束位置否必须是常量
+          seq    支持变量
+             
+
+案例1：猜数的脚本
+
+    计算机随机产生一个1到10之间的数字
+    用户输入一个1到10之间的数字
+
+    如果  计算机随机产生数字 与 用户输入数字  相等，则输出 恭喜您猜对了
+
+    如果 用户输入数字 比 计算机随机产生数字  大 ，则输出 您猜大了
+    如果 用户输入数字 比 计算机随机产生数字  小 ，则输出 您猜小了 
+
+
+[root@svr10 opt]# cat /opt/num.sh
+ #!/bin/bash
+ num=$[$RANDOM%10+1]            #计算机随机产生一个1～10数字
+
+ for i  in {1..3}
+ do
+ read  -p  '请输入一个1～10之间的数字:'    cai
+
+ if [  $num  -eq  $cai  ];then
+   echo 恭喜您猜对了
+   exit                           #猜正确结束整个脚本
+ elif  [  $cai  -gt  $num ];then
+   echo 您猜大了
+ else
+   echo 您猜小了
+ fi
+ done
+################################################### 
+while循环：
+
+   while 条件判断
+    do
+             重复执行的语句
+    done
+
+[root@svr10 opt]# cat /opt/while01.sh
+ #!/bin/bash
+ i=1
+ while [ $i -le 5 ]
+ do
+    echo hello
+    let i++                 #让变量i自增
+ done
+
+[root@svr10 opt]# cat /opt/num.sh
+#!/bin/bash
+ num=$[$RANDOM%10+1]
+
+ while :
+ do
+ read -p '请输入一个1～10之间的数字:'   cai
+
+ if [ $num -eq $cai ];then
+   echo 恭喜您猜对了
+   exit
+ elif  [ $cai -gt $num ];then
+   echo 您猜大了
+ else
+   echo 您猜小了
+ fi
+ done
+#######################################################
+case语句
+
+案例2:编写一个判断脚本
+在 server0 上创建 /root/foo.sh 脚本
+1)当运行/root/foo.sh redhat,输出为fedora
+2)当运行/root/foo.sh fedora,输出为redhat
+3)当没有任何参数或者参数不是 redhat 或者fedora时,
+其错误输出产生以下信息: /root/foo.sh redhat|fedora
+
+[root@svr10 opt]# vim /root/foo.sh 
+ #!/bin/bash
+ case $1 in
+ redhat)
+   echo fedora ;;
+ fedora)
+   echo redhat ;;
+  *)
+   echo '/root/foo.sh redhat|fedora' ;;
+ esac
+
+案例：
+    利用case语句书写脚本：/opt/mkto.sh
+    实现 /opt/mkto.sh -m /root/abc  可以创建目录 /root/abc
+    实现 /opt/mkto.sh -t /root/1.txt 可以创建文件 /root/1.txt
+    实现 /opt/mkto.sh -r /root/1.txt 可以删除文件 /root/1.txt  
+    用户输入非 -m|-t|-r 选项，提示信息： /opt/mkto.sh -m|-t|-r
+
+[root@svr10 opt]# cat  /opt/mkto.sh 
+ #!/bin/bash
+ case  $1  in
+ -m)
+  mkdir  -p  $2;;
+ -t)
+  touch  $2;;
+ -r)
+   rm -rf  $2;;
+  *)
+ echo  '/opt/mkto.sh -m|-t|-r';;
+ esac
+
+######################################################
+Shell函数
+
+    为一堆命令制作的别名 
+
+[root@svr10 /]# mkcd(){
+> mkdir /nsd
+> cd /nsd
+> }
+[root@svr10 /]# mkcd
+
+[root@svr10  nsd]# mkcd(){
+> mkdir $1
+> cd $1
+> }
+[root@svr10  nsd]# mkcd /nsd01
+[root@svr10  nsd01]# mkcd /nsd02
+[root@svr10  nsd01]# sum(){
+> echo $[$1+$2]
+> }
+[root@svr10  nsd01]# sum  1  2
+
+########################################################
+
+中断及退出
+  break可以结束整个循环；
+  continue结束本次循环，进入下一次循环；
+  exit结束整个脚本
+
+[root@svr10 /]# vim /opt/for05.sh
+#!/bin/bash
+for i in {1..5}
+do
+  [ $i -eq 3 ] && break
+  echo $i
+done
+
+echo hello world
+
+
+#####################################################
+
+字符串截取及切割
+
+子串截取的三种用法：
+
+       ${变量名:起始位置:长度}    起始位置从0开始
+
+[root@svr10 /]# a=13548870311
+[root@svr10 /]# echo ${a}
+13548870311
+[root@svr10 /]# echo  ${a:0:2}
+[root@svr10 /]# echo  ${a:3:2}
+[root@svr10 /]# echo  ${a:7:4}
+
+[root@svr10 /]# echo  ${a:0:3}
+[root@svr10 /]# echo  ${a:7:4}
+[root@svr10 /]# echo  ${a:0:3}${a:7:4}
+[root@svr10 /]# echo  ${a:0:3}****${a:7:4}
+
+输出字符串的总的长度：
+[root@svr10 /]# echo ${#a}
+
+
+    expr substr  "$变量名"    起始位置  长度     #起始位置从1开始
+
+[root@svr10 /]# echo ${a}
+13548870311
+[root@svr10 /]# expr  substr $a  1 3 
+135
+[root@svr10 /]# expr  substr $a  2 4 
+
+
+    echo $变量名   |   cut  -b  起始位置-结束位置
+
+[root@svr10 /]# echo ${a}
+13548870311
+[root@svr10 /]# echo $a | cut -b 8-11
+
+[root@svr10 /]# echo $a | cut -b 1-3
+
+[root@svr10 /]# echo $a | cut -b 1,3,5,7
+
+案例：
+    利用字符串提取，生成随机一位验证码   数字或字母(大小写)
+    
+[root@svr10 /]# cat /opt/str.sh
+#!/bin/bash
+x=qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM
+ 0123456789
+
+num=$[$RANDOM%62]
+echo ${x:$num:1}
+
+    利用字符串提取，生成随机4位验证码
+#!/bin/bash
+x=qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM
+  0123456789
+
+ for i in {1..4}
+ do
+ num=$[$RANDOM%62]
+ a=${x:$num:1}$a
+ done
+ echo $a
+
+#######################################################
+
+字符串掐头去尾：
+
+    从左向右，最短匹配删除：${变量名#*关键词}
+    从左向右，最长匹配删除：${变量名##*关键词}
+    从右向左，最短匹配删除：${变量名%关键词*}
+    从右向左，最长匹配删除：${变量名%%关键词*}
+
+[root@svr10 /]# head -1 /etc/passwd
+[root@svr10 /]# a=`head -1 /etc/passwd`
+[root@svr10 /]# echo $a
+
+[root@svr10 /]# echo ${a#*0}
+[root@svr10 /]# echo ${a##*0}
+
+[root@svr10 /]# echo ${a%:*}
+[root@svr10 /]# echo ${a%%:*}
+
+[root@svr10 /]# echo ${a%t*}
+[root@svr10 /]# echo ${a%%t*}
+
+[root@svr10 /]# mkdir  /str
+[root@svr10 /]# cd  /str
+[root@svr10 str]# touch  {1..20}.txt
+[root@svr10 str]# ls
+[root@svr10 str]# for  i  in  `ls  *.txt`
+ > do
+ > mv  $i   ${i%.*}.doc
+ > done
+[root@svr10 str]# ls
+
+子串替换的两种用法：
+
+    只替换第一个匹配结果：${变量名/old/new}
+    替换全部匹配结果：${变量名//old/new}
+
+[root@svr10 /]# a=111222333
+[root@svr10 /]# echo  ${a/1/b}
+
+[root@svr10 /]# echo  ${a//1/b}
+
+[root@svr10 /]# echo  ${a//2/abc}
+
+####################################################
+初值的处理
+
+  ${变量名:-初始值} 判断变量是否存在，决定是否给变量赋初始值。
+
+[root@svr10 /]# echo ${var}
+
+[root@svr10 /]# echo ${var:-nsd1712}
+
+[root@svr10 /]# var=Wnsd1712
+[root@svr10 /]# echo ${var:-nsd1712}
+
+案例:
+[root@svr10 /]# cat /opt/user.sh
+#!/bin/bash
+read  -p  '请输入您要创建的用户名:'    user
+
+if [  -z  $user  ];then
+ read  -p  '请问是否创建默认值dc用户(y/n)'   abc
+   if [  $abc  ==  y  ];then
+     useradd  ${user:-dc}  &> /dev/null
+     echo  dc用户创建成功
+  else
+    echo  '请正确输入您要创建的用户名'
+    exit
+  fi
+else
+  useradd  $user &> /dev/null
+  echo  $user成功
+fi
+#################################################
+使用Shell数组,储存多个变化的值
+
+建立数组的方法：
+
+    格式1，整体赋值：数组名=(值1  值2  .. ..  值n)
+    格式2，单个元素赋值：数组名[下标]=值
+
+[root@svr10 /]# a=(ftp  web  mail  DNS)
+[root@svr10 /]# echo ${a[*]}
+[root@svr10 /]# echo ${a[0]}
+[root@svr10 /]# echo ${a[1]}
+[root@svr10 /]# echo ${a[2]}
+[root@svr10 /]# echo ${a[3]}
+
+[root@svr10 /]# a[4]=tts         #为数组a第四个元素赋值
+[root@svr10 /]# echo ${a[*]}     #输出数组的所有元素
+[root@svr10 /]# echo ${#a[*]}    #输出数组元素的个数
+
+######################################################
+案例:编写getips.sh脚本
+1）任务需求及思路分析
+使用read命令从键盘读入用户指定的IP地址，每次读入一个。
+
+因为需要读多次，直到输入“EOF”时结束，所以可采用while循环结构
+
+要求用数组保存每次输入的IP地址，那肯定从下标为0的元素开始存放，赋值操作放在循环体内，下标的递增通过一个变量i控制。
+
+遇“EOF”结束while循环后，输出整个数组的内容，并显示数组元素的个数、
+第1个录入的IP地址。
+
+[root@svr10 /]# cat /opt/getip.sh
+#!/bin/bash
+i=0
+while :
+do
+ read -p  '请输入您要储存的IP地址(输入EOF结束):'   ip
+ [ $ip == EOF ] && break
+ ipaddr[$i]=$ip
+ let i++
+done
+
+echo 输入的所有IP地址为:${ipaddr[*]}
+echo 您输入的IP地址一共 ${#ipaddr[*]} 个
+echo 您输入的第一个IP地址为:${ipaddr[0]}
+
+#######################################################
+Shell中处理交互脚本
+
+1.识别交互式指令
+[root@svr10 /]# yum -y install expect
+
+[root@svr10 /]# mkdir /dvd
+[root@svr10 /]# mount /dev/cdrom /dvd
+[root@svr10 /]# vim /etc/yum.repos.d/dvd.repo
+[dvd]
+name=dvd
+baseurl=file:///dvd
+enabled=1
+gpgcheck=0
+
+
+
+######################################################
+
+ 默认最后一个语句不生效
+
+[root@svr10 /]# cat /opt/ssh.sh
+#!/bin/bash
+rm -rf  /root/.ssh/known_hosts    #清除本机ssh的标识记录
+expect  <<abc
+spawn ssh  root@127.0.0.1     #运行ssh  root@127.0.0.1
+expect "yes"  {send "yes\r"}  #屏幕出现yes地方,输入yes敲回车   
+expect "password"  {send "123456\r"} 
+expect "#"  {send "touch /haxi.txt\r"} 
+expect "#"            #默认最后一个语句不生效                         
+abc
+
+#####################################################
+[root@svr10 /]# vim /opt/ssh.sh
+#!/bin/bash
+rm -rf /root/.ssh/known_hosts
+for i in {2..254}
+do
+expect <<abc
+spawn ssh-copy-id root@192.168.4.$i
+expect "yes"  {send "yes\r"}
+expect "password" {send "123456\r"} 
+expect "#"  
+abc
+done
+
+###################################################
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,25 @@
+部署redis集群
+1 准备6台redis服务并启用了集群配置
+2 部署管理主机 
+3 创建集群
+4 测试集群
+5 管理集群
+5.1 添加新主机 （master  slave）
+5.2 删除主机 （slave  master）
++++++++++++++++++++++++++++++++++++++++
+6 把删除的master 或 slave 角色的 redis服务器再添加到集群里的步骤：
+>cluster reset;
+>exit
+
+]# rm -rf /var/lib/redis/6379/*
+
+]# /etc/init.d/redis_6379 restart
+
+在管理主机上添加新主机
+
+7 redis集群什么情况下会无法访问。
+
+
+
+
+

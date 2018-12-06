@@ -1,0 +1,180 @@
+DBA2_day03 配置MHA集群
+
+服务器准备： 15分钟  到 09：18
+
+数据库服务器5台 
+192.168.4.51 到 192.168.4.55
+恢复为独立的数据库服务器，只保留系统默认的4个库其他的全部删除
+
+把mha-soft-student目录下的所有软件 分别拷贝到5台数据库服务器上
+
+再准备一台服务器192.168.4.56 做管理集群的主机  
+不需要运行mysql数据库服务。也拷贝mha-soft-student目录下的所有软件
+
+
+主机192.168.4.50 做客户端， 不需要运行mysql数据库服务。
+也不需要拷贝软件。
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+二、配置mysql  一主多从 结构
+2.1 配置主库 192.168.4.51   
+2.2 配置从库 
+2.2.1 配置备用主库 52 和 53
+2.2.2 配置纯从库 54 和 55
+
+2.3 验证配置
+2.3.1 在主库51 添加 访问数据时的连接用户
+mysql> create database db8;
+mysql> create table db8.a(id int);
+mysql> grant select,insert on db8.* to yaya200@"%" identified by "123qqq...A";
+2.3.2 在客户端50主机连接主数据库服务器51
+]# mysql -h192.168.4.51  -uyaya200 -p123qqq...A
+mysql> select  * from db8.a;
+mysql> insert into  db8.a values(999);
+++++++++++++++++++++++++++++++++++++
+三、配置高可用集群
+3.1 集群环境准备
+3.3.1  配置所以数据库服务器主机之间彼此无密码登陆
+3.3.2  配置管理主机56可以无密码连接所有的数据库服务器
+3.3.3  所有主机51-56 安装perl软件包 ]#yum -y  install perl-*
+
+3.3.4  安装MHA集群软件包 
+3.3.4.1 安装MHA依赖的软件所有主机51-56   (6分钟 14：36)
+]# cd mha-soft-student/
+]# ls perl-*.rpm
+]# yum -y install perl-*.rpm
+3.3.4.2 所有主机51-56 安装mha_node软件包 (2分钟 14：41)
+]# cd mha-soft-student/
+]# rpm -ivh  mha4mysql-node-0.56-0.el6.noarch.rpm
+3.3.4.3 在主机56 安装mha_manager软件包 
+]# tar -zxvf mha4mysql-manager-0.56.tar.gz 
+]# cd mha4mysql-manager-0.56/
+]# perl Makefile.PL
+]# make
+]# make install
+
+休息15分钟 到  15：13
+
+3.3.4.4 在主机56 创建管理命令
+]# ls /usr/local/bin/masterha_* 
+如果没有命令话执行如下操作创建
+]# cd mha4mysql-manager-0.56
+]# cp  -r  bin   /root/
+]# ls /root/bin/
+
+3.2 配置集群(在管理主机 56上执行下面的操作)
+
+3.2.1 创建集群配置文件
+]# mkdir /etc/mha/
+]# cd mha4mysql-manager-0.56/samples/conf
+]# cp app1.cnf  /etc/mha/
+
+
+3.2.2 编辑配在文件 app1.cnf
+]# vim /etc/mha/app1.cnf
+[server default]
+manager_workdir=/etc/mha
+manager_log=/etc/mha/manager.log
+master_ip_failover_script=/etc/mha/master_ip_failover
+ssh_user=root
+ssh_port=22
+repl_user=repluser
+repl_password=123qqq...A
+user=root
+password=123qqq...A
+[server1]
+hostname=192.168.4.51
+port=3306
+candidate_master=1
+[server2]
+hostname=192.168.4.52
+port=3306
+candidate_master=1
+[server3]
+hostname=192.168.4.53
+port=3306
+candidate_master=1
+[server4]
+hostname=192.168.4.54
+port=3306
+no_master=1
+[server5]
+hostname=192.168.4.55
+port=3306
+no_master=1
+:wq
+休息15分钟到 16：15
+3.2.3 创建vip地址切换脚本
+]# cd mha-soft-student 
+]# cp master_ip_failover /etc/mha/
+]# chmod  +x  /etc/mha/master_ip_failover
+]# vim  /etc/mha/master_ip_failover
+ 35 my $vip = '192.168.4.100/24';  # Virtual IP 
+ 36 my $key = "1";
+ 37 my $ssh_start_vip = "/sbin/ifconfig eth0:$key $vip";
+ 38 my $ssh_stop_vip = "/sbin/ifconfig eth0:$key down";
+:wq
+
+3.2.4 在竞选主数据库服务器上添加授权用户(51 | 52 | 53)
+51]# mysql -uroot  -p123456
+
+mysql> grant all on  *.* to  root@"%" 
+identified by "123qqq...A";
+
+mysql> quit;
+
+3.2.4 把vip地址 绑定在当前的主库服务器51的 eth0接口
+51]# ifconfig  eth0:1  192.168.4.100
+51]# ifconfig  eth0:1
+
+
+4 在管理主机56 上测试配置
+4.1 测试ssh配置
+]# masterha_check_ssh --conf=/etc/mha/app1.cnf
+[info] All SSH connection tests passed successfully.
+
+4.2 测试主从同步配置
+]# masterha_check_repl --conf=/etc/mha/app1.cnf
+MySQL Replication Health is OK.
+
+休息10分钟到 17：30
+
+5 启动管理服务
+56]#masterha_manager --conf=/etc/mha/app1.cnf 
+--remove_dead_master_conf  --ignore_last_failover
+
+打开新终端看状态信息
+56]# masterha_check_status --conf=/etc/mha/app1.cnf
+
+在客户端连接vip地址192.168.4.100 访问数据库服务器
+mysql50 ~]# mysql -h192.168.4.100  -uyaya200 -p123qqq...A
+mysql> select  * from  db8.a;
+mysql> select @@hostname;
+mysql> insert into db8.a values(888);
+
+停止主库51主机上的数据服务
+51]#  systemctl  stop  mysqld
+
+在客户端依然可以连接vip地址192.168.4.100 访问数据库服务器
+mysql50 ~]# mysql -h192.168.4.100  -uyaya200 -p123qqq...A
+mysql> select @@hostname;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

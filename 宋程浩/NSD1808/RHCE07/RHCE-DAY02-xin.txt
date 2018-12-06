@@ -1,0 +1,265 @@
+五、配置网站服务器——
+Apache HTTP Server ——httpd
+
+HTTP：超文本传输协议
+
+服务端：httpd  IIS   tomcat  nginx【提供网页资源】
+客户端（浏览器）：IE Firefox  elinks 【获取并显示网页】
+
+
+URL网址：Uniform Resource Locator统一资源定位器
+格式：http://www.bai.com/
+           ftp://
+协议名://服务器地址:端口号/目录的路径/文档名称
+
+默认首页/索引页/起始页:index.html  index.php index.asp  ......
+
+软件包：httpd  mod_ssl mod_wsgi(网站脚本接口)
+配置文件：
+
+全局配置文件——/etc/httpd/conf/httpd.conf 【定义默认网页叫什么名字，默认起始页放在哪儿】
+常见的httpd服务设置语句：
+ServerName 【注册的网站名字，在全局配置里默认是注释的】
+  classroom.example.com提供域名解析
+      server0.example.com
+      www0.example.com
+      webapp0.examle.com
+DocumentRoot /var/www/html 【网页根目录】【有浏览器来访问我的网站  我的网页放在哪儿，httpd去那个目录下找网页。】
+DirectoryIndex  index.html  【起始页的名字】
+Listen 80 【监听端口】
+IncludeOptional conf.d/*.conf
+自定义设置——/etc/httpd/conf.d/*.conf
+
+系统服务：httpd
+
+虚拟WEB主机作用：让一台web服务器显示多个不同页面
+
+Web服务器的类型——
+单一Web站点服务器：有多个地址，但是提供的网页资源相同
+http://server0.example.com/  ==》 网页1
+http://www0.example.com/  ==》网页1
+
+虚拟Web站点服务器：
+http://server0.example.com/  ==》 网页1
+http://www0.example.com/  ==》网页2
+
+方式：
+基于域名区分
+基于IP区分
+基于端口区分
+
+配置虚拟Web主机——
+<VirtualHost IP地址：端口号>
+    ServerName  网站1的DNS名称
+    DocumentRoot 网站1的网页根目录 
+</VirtualHost>
+<VirtualHost IP地址：端口号>
+    ServerName  网站2的DNSD名称
+    DocumentRoot 网站2的网页根目录 
+</VirtualHost>
+一旦启用虚拟web主机后，外部的DocumentRoot ServerName会被忽略。第一个虚拟站点被视为默认站点，若客户机请求的URL不属于任何已知站点，则由第一站点响应。
+
+12.实现一个web服务器
+
+14.配置虚拟主机
+
+httpd服务配置帮助
+yum -y install httpd-manual
+systemctl restart httpd
+firefox http://服务器地址/manul
+检查配置语法：
+httpd -t
+
+13.配置安全web服务
+SSL:Secure Socket Layer  安全套接字层
+TLS: Transport  Layer Security 传输层安全
+PKI Public Key infrastructure 公钥基础设施
+CA certificate authority证书授权/颁发机构
+
+普通传输：HTTP （TCP 80）
+http://server0.example.com
+加密传输：HTTPS (TCP 443)
+https://server0.example.com
+
+实现安全web的目的：
+1.确保通信数据的保密性（密钥）
+2.确保网站的权威性（数字证书）
+
+Web服务器实现HTTPS需要提供的条件——
+密钥
+公钥（锁）：主要用来加密数据
+私钥（钥匙）：主要用来解密数据
+数字证书：主要用来表明拥有人的合法性（包括证书的拥有人的名称，证书编号，证书有效期，颁发机构的签名 拥有人的公钥。）
+CA的数字证书（根证书）：证书颁发机构的数字证书。
+由第三方CA中心自己的凭证，可以用来检查其他的证书是不是本CA机构颁发的
+
+#yum -y install  mod_ssl
+#vim /etc/httpd/conf.d/ssl.conf
+<VirtualHost _default_:443>
+ ServerName server0.example.com
+ DocumentRoot /var/www/html
+SSL ...调用数字证书【localhost.crt==》server0.crt】
+SSL...调用密钥 【localhost.key==> server0.key0】
+SSL...调用根证书 【example ==》 example-ca.crt】
+</VirtualHost>
+
+#systemctl restart httpd
+15.配置web内容的访问
+使用<Directory>配置区段
+每个文件夹自动继承父目录的ACL访问权限 
+除非针对子目录有明确设置
+<Directory 目录的绝对路径>
+  Require all  denied|granted
+  Require ip  IP或者网段地址
+</Directory>
+
+禁止任何客户机访问
+<Directory />
+  Require all  denied
+</Directory>
+允许任何客户机访问
+<Directory />
+  Require all  granted
+</Directory>
+仅允许部分客户机访问
+<Directory />
+  Require ip  172.25.0.11
+</Directory>
+
+Linux安全策略：
+使用自定的Web根目录
+调整Web站点http://server0.example.com的网页目录，要求如下：
+1、新建目录/webroot，作为此站点新的网页目录
+2、从http://classroom/pub/materials/station.html下载一个文件副本到这个目录，重命名为index.html
+3、不要对文件index.html的内容作任何修改
+4、确保站点http://server0.example.com仍然可以访问
+
+#mkdir  /webtoot
+#echo woshiwebroot  > /webroot/index.html
+#vim /etc/httpd/conf.d/00de.conf
+<VirtualHost *:80>
+DocumentRoot /webroot
+ServerName server0.example.com
+</VirtualHost>
+#systemctl restart httpd
+思路：客户端访问服务端资源呢
+1.防火墙是否限制
+2.服务本身的访问控制
+#vim /etc/httpd/conf.d/00de.conf
+<VirtualHost *:80>
+DocumentRoot /webroot
+ServerName server0.example.com
+</VirtualHost>
+<Directory "/webroot">
+Require all granted
+</Directory>
+#systemctl restart httpd
+3.selinux
+安全的上下文（标签）
+selinux把linux下重点的文件打上了标签
+httpd   /etc/http/conf/httpd.conf
+           /etc/http/conf.d/*.conf
+           /var/www
+#ls -Zd   /var/www
+用户：角色：访问类型：选项
+#setenforce 0 
+#firefox
+#setenforce 1
+-chcon [-R]   --reference=模板目录  新目录
+#chcon  --reference=/var/www   /webroot
+16.实现动态WEB访问
+静态网站：
+  服务端的原始网页=浏览器访问到的网页
+动态网站：
+  服务端的原始网页！=浏览器访问到的网页 
+ 由Web服务软件接收请求，动态程序转后端模块处理
+
+1.安装支持python软件
+#yum -y install  mod_wsgi
+
+2.切换到相应/var/www/目录下载动态界面
+#mkdir -p  /var/www/webapp0
+#cd  /var/www/webapp0
+#wget  http://。。。。。。
+#cat  webinfo.wsgi
+
+3.在Desktop上查看，可以看到源代码
+#elinks http://webapp0.example.com/webinfo.wsgi
+
+4.在server0上修改 
+/var/www/webapp0 ===== 客户端的 /
+#vim /etc/httpd/con.d/00-def-conf
+<>
+  alias  /  /var/www/webapp0/webinfo.wsgi
+<>
+5重启httpd服务验证
+#elinks --dump  http://webapp0.example.com
+
+6.修改
+#vim /etc/httpd/conf.d/00-def.conf
+WSGIScriptAlias  路径别名   实际的网页程序的绝对路径
+WSGIscriptalias  /  /var/www/webapp0/webinfo.wsgi
+#systemctl restart httpd
+
+7.修改webapp0监听的端口8909
+Listen 8909
+<VirtualHost *:8909>
+......
+</VirtualHost>
+8.selinux 限制非默认端口8909
+semanage <tab>
+#semanage port -l  | grep http #查看允许的端口
+#semanage port -a -t http_port_t -p tcp  8909 
+此操作需要足够的内存
+邮件服务器承担的功能有哪些：
+标准邮件服务器（qq邮箱）：
+    1）提供电子邮箱（yangguo@qq.com）及存储空间
+    2）为客户端向外发送邮件给其他邮箱（xiaolongnv@163.com）
+    3）接收/投递其他邮箱用户发给本邮箱用户的邮件
+零客户邮件服务器（机房内网）： —— nullclient 只发不收
+    1）不提供电子邮箱
+    2）为客户端向外发送邮件给其他邮箱（xiaolongnv@163.com）
+    3）不接收/投递其他邮箱用户发给本服务器的邮件
+
+    属性配置：有一台后端标准邮件服务器、发件来源
+
+    例如：旅游景点（海南三亚）代寄礼品（10个椰子）的代办点
+
+
+postfix服务器端配置文件 /etc/postfix/main.cf
+
+relayhost = [自动路由到的目标地址]
+inet_interfaces = loopback-only
+myorigin = 显示来自于。。。地址
+mynetworks = 127.0.0.0/8 [::1]/128
+mydestination = 
+local_transport = error:报错提示信息
+
+考试环境：
+     system1（空客户端） ---》考官的后端邮件服务器
+     system2（空客户端） ---》考官的后端邮件服务器
+
+练习环境：
+    server0（空客户端）
+    desktop0（后端邮件服务器）
+后端的邮件服务器由desktop0来提供【lab smtp-nullclient setup】
+
+1）把 server0 配置成零客户邮件服务器
+# vim  /etc/postfix/main.cf
+relayhost = [后端邮件服务器地址]
+inet_interfaces = loopback-only
+myorigin = 发件来源地址
+mynetworks = 127.0.0.0/8  [::1]/128
+mydestination = 哪些邮箱区域/后缀需要安排投递邮件
+local_transport = error:报错信息
+
+2）使用 desktop0 来模拟后端的标准邮件服务器
+# lab  smtp-nullclient  setup
+
+测试方法：
+练习环境：在server0，发一封邮件给本机的student用户
+echo  '邮件正文'  |  mail  -s  邮件标题  收件人地址
+在desktop0上的student用户能收到这封邮件
+mail  -u  用户名
+
+考试环境：在system1上给本机的用户arthur发一封邮件，通过指定的网址来确认结果。

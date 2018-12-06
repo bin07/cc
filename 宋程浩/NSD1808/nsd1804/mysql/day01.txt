@@ -1,0 +1,313 @@
+启动主机192.168.4.50  配置要求如下：
+禁用selinux
+关闭防火墙
+配置好yum源
+配置固定ip地址192.168.4.50
+主机名  host50
+
+ftp   172.40.50.117   
+2018/soft/  软件
+2018/notedir/  笔记
+2018/homedir/  练习题
+
+vnc  端口号 7000
++++++++++++++++++++++++++++++++
+庞丽静
+静静
+工作邮箱  panglj@tedu.cn
+8:30
+9:00
+18:00
++++++++++++++++++++++++++++++
+授课大纲 
+
+数据库管理  15天    DBA  理论多   知识点  命令多  练习时间少  晚自习
+                                                               
+15天的学习内容   mysql   redis  mongodb
+                          每隔天有1次试验 
+
+MySQL_day01
+搭建数据库服务器
+什么是数据库？存储数据的仓库
+
+部署一台数据库，提供数据库存储服务？
+
+购买服务器 （硬件主机  云主机 ）
+
+安装操作系统： Unix    Linux   Windows
+                                   redhat7.4   2017
+                                   
+装包
+软件包的来源？ 官网下载  XXX.主.次.修改次数 
+                        操作系统光盘自带软件
+
+软件包封包类型（RPM  源码）？ 
+源码 可以自定义配置和安装 必须解决依赖关系
+RPM  软件是封装好不可以自定义安装  安装卸载简单
+                                                          rpm  -ivh   rpm -e 
+
+开源软件还是商业软件？ 
+开源不等于免费
+
+使用那种版本软件？（提供数据库服务的软件有哪些？）
+                                Mysql   Oracle  SQL server  DB2 (  RDBMS )
+                                按照一定的规则存储数据                                  
+姓名  性别  籍贯  身份证
+
+	               Redis   Mongodb  Memcached	 (NoSQL)
+                                                              key   values
+                                                              X        101
+Mysql的特点：
+开源且跨平台： unix  linux   windows
+支持主流的编程语言：php  java   python  ruby  perl 
+可移植性好： 系统只要有C 运行环境
+
+A
+/usr/local/mysql/
+scp  -r  /usr/local/mysql/  b:/usr/local/
+
+B
+yum  -y  install gcc   gcc-c++
+/usr/local/mysql/
+
+数据库服务通常和网站服务一起使用：LAMP   LNMP
+                                                      Mysql  Mongodb
+
+购物网站  游戏网站  视频网站  论坛网站  金融网站
+
+数据库服务用来存储什么样数据：
+
+
+mysql-5.7.17.tar   
+mysql-community-server-5.7.17-1.el7.x86_64.rpm
+mysql-community-client-5.7.17-1.el7.x86_64.rpm
+
+装包
+rpm  -qa  | grep -i mariadb
+systemctl  stop  mariadb
+rpm -e --nodeps mariadb-server
+rpm -e --nodeps mariadb-libs
+rm  -rf  /var/lib/mysql/*
+rm  -rf /etc/my.cnf
+
+yum  -y  install  perl-JSON
+rpm  -Uvh  mysql-community-*.rpm
+rpm -qa | grep -i mysql
+
+修改配置文件 /etc/my.cnf
+
+
+
+启动服务
+   30  systemctl  start  mysqld
+   31  systemctl  status  mysqld
+   32  ls /var/lib/mysql
+   33  systemctl  enable  mysqld
+
+查看服务信息
+端口号 3306     netstat  -utnlp | grep  mysqld
+进程 mysqld   ps  -C  mysqld
+
+
+]# grep password /var/log/mysqld.log
+
+2018-07-10T02:46:42.233732Z 1 [Note] A temporary password is 
+
+generated for root@localhost: PjCJW&is,8jV
+
+把数据存储到数据库服务器上的过程？
+1 连接数据库服务器  
+]#mysql  -hlocalhost   -uroot   -p'密码'
+mysql> set global validate_password_policy=0;
+mysql> set global validate_password_length=6;
+mysql> alter user  root@"localhost" identified by "123456";
+mysql> show  databases;
+mysql> quit
+
+]#mysql  -hlocalhost   -uroot   -p123456
+mysql> show  databases;
+使用SQL （结构化查询语言）命令 管理数据库， 
+SQL命令的使用规则和分类？
+2 创建库  相当于系统的文件夹（查看  创建  切换  删除）
+show databases;
+create database  库名；
+select  database();
+use  库名；
+show tables;
+drop  database  库名；
+
+
+数据库名的命名规则？
+
+3 创建表 （ 相当于系统文件）
+* 表必须在库里创建
+（创建表 查看内容  查看表结构   删除表  写入数据）
+学生信息
+
+vim /root/stu.txt
+字段名
+姓名     性别  年龄   电话  
+赵志斌  男     21    8888888  记录
+小红     女     18    9888888
+:wq
+
+
+create  database  studb;
+
+create  table   studb.stuinfo(
+name   char(15),
+sex      char(10),
+age     int,
+tel       char(11)  
+);
+
+desc  studb.stuinfo;
+select  * from studb.stuinfo;
+
+4 插入数据
+insert into  studb.stuinfo  values("bob","boy",21,"8888888"),
+
+("zhaozhibin","boy",19,"66666666");
+
+select  * from studb.stuinfo;
+update studb.stuinfo set sex="girl";
+delete from studb.stuinfo;
+select  * from  studb.stuinfo;
+drop table stuinfo;
+show tables;
+5 断开连接
+>quit;
+指定表的字符集 可以存储中文数据
+use  studb;
+
+create  table  studb.学生表 (姓名  char(10) , 年龄 int)
+DEFAULT CHARSET=utf8;
+
+show  create  table  学生表；
+
+insert into studb.学生表  values("张三丰",108);
+
+select  * from  学生表;
+休息到16:15
+
+
+
+
+MySQL数据类型
+
+数值类型 
+整数类型    11   +11
+               -11
+
+create  database  db1;
+use db1;
+
+create  table t1(level  tinyint);
+desc t1;
+select  * from t1;
+insert into   t1  values(-1);
+insert into   t1  values(99);
+insert into   t1  values(256);
+
+create  table t2(level  tinyint  unsigned);
+desc t2;
+select  * from t2;
+
+insert into   t2  values(-1);
+insert into   t2  values(99);
+insert into   t2  values(256);
+
+浮点类型  
+
+整数.小数   总位数
+1029.33        6
+
+create table  t3 (pay  float(5,2));
+
+insert  into  t3  values(1118.23);
+insert into  t3  values(118.23);
+insert into  t3  values(19);
+
+xxx.xx
+999.99
+-999.99
+
+xxxxx.xx
+99999.99
+        0.00
+-99999.99
+
+字符类型
+char （255）  定长  
+varchar（ 65532） 变长  
+
+大文本类型
+text
+blob
+/root/media/film/xxx.avi
+ 音频文件   图片   视频文件
+
+create  table   t5(name  char(5))
+insert into   t5  values  ("bob"),("ab");
+
+name
+  bob
+   ab
+
+
+create  table   t6(name  varchar(5))
+insert into   t6  values  ("bob"),("ab");
+
+name
+bob
+ab
+
+class  nsd1804 char(7)
+email  varchar(30)
+xxxx@163.com
+        @yahoo.net
+        @sina.com.cn
+
+create  table   t7  (
+gamename char(15), level smallint unsigned , pay  float(7,2) );
+
+desc  t7;
+
+ insert into  t7  values("zbj",250,1880.22);
+
+
+枚举类型 ： 让字段的值 在规定的范围内选择
+enum(值列表)  单选
+set(值列表)  多选
+
+create  table   t8  ( name  char(15),sex  enum
+
+("boy","girl","no"),likes  set("game","film","eat","sleeps") );
+
+insert into   t8  values("bob","man","it,book");
+insert into   t8  values("bob","boy","eat,sleeps");
+select  * from t8;
+
+搭建MySQL数据库服务器 并设置数据库管理员root用本机登陆密码为
+
+123456
+
+
+课后练习：
+在主机51-55 运行MySQL数据库服务并设置数据库管理员root用本机登陆密
+
+码为123456
+
+
+创建一张表存储前任的信息。
+db2  库   dogperson表  
+
+
+
+
+
+
+
+
+
+

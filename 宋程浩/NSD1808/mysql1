@@ -1,0 +1,56 @@
+软件包下载mysql
+端口号 3306
+进程 # ps -aux | grep -i mysqld
+初始化文件/var/lib/mysql
+配置文件 /etc/my.conf
+mysql -hlocalhost -uroot -p"Mysql..1" 进入库 添加选项 --auto-rehash 可用tab表名称
+设置mysql密码 alter user root@"localhost" identified by "Mysql..1"
+>show databases; 查看库
+修改密码策略
+>show variables like "%password%"
+>validate_password_policy=0
+>validate_password_length=6
+
+永久配置修改配置文件在/etc/my.conf
+在mysql下面添加
+validate_password_policy=0
+validate_password_length=6
+
+设置mysql密码 alter user root@"localhost" identified by "123456"
+############################################
+1、MySQL常用命令(name库名)
+create database name; 创建数据库
+use name; 选择数据库
+drop database name 直接删除数据库，不提醒
+show tables; 显示表
+select 中加上distinct去除重复字段
+mysqladmin drop database name 删除数据库前，有提示。
+显示当前mysql版本和当前日期
+select version(),current_date;
+#############################################
+查看表结构
+	desc t2;
+创建表
+create table studb.stuinfo(name char(10),age int );
+select * from studb.stuinfo; 查看表
+插入表内容
+insert into studb.stuinfo values("bob"，12),("dc",18); 
+修改表记录                                   参数 
+update studb.stuinfo set age=100 where name="dc";
+update studb.stuinfo set age=100;不加参数全部修改
+删除表
+delete from studb.stuinfo where name="dc";
+delete from studb.stuinfo ;不加参数全部删除
+########################################
+数值类型
+
+
+
+
+
+
+
+
+
+
+

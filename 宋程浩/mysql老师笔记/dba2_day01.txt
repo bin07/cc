@@ -1,0 +1,170 @@
+配置master数据库服务器 51
+]# vim /etc/my.cnf
+ [mysqld]
+ log_bin=master51
+ server_id=51
+ binlog_format="mixed"
+:wq
+
+]# systemctl  restart  mysqld
+
+]# ls /var/lib/mysql/master51.*
+
+]# mysql  -uroot  -p123456
+
+mysql> grant replication slave  on *.* to  repluser@"%" 
+identified by "123qqq...A";
+
+mysql> show master status;
+
+
+配置slave数据库服务器 52   （15分钟 到 10：29）
+]# vim /etc/my.cnf
+[mysqld]
+server_id=52
+:wq
+]# systemctl  restart mysqld
+
+mysql> change master  to 
+    -> master_host="192.168.4.51",master_user="repluser",
+    -> master_password="123qqq...A",
+    -> master_log_file="master51.000001",
+    -> master_log_pos=441;
+
+mysql> start slave;
+
+mysql> show slave status\G;
+
+
+在客户端主机50测试配置
+51]# mysql -uroot  -p123456
+mysql> create database  db1;
+mysql> create table  db1.a (id int);
+mysql> grant select,insert on db1.* to yaya100@"%"
+identified by "123qqq...A";
+
+mysql50 ~]# mysql -h192.168.4.51 -uyaya100  -p123qqq...A
+mysql> insert into db1.a values(110),(120),(119);
+
+52]# mysql -uroot -p123456
+mysql> select  * from  db1.a;  能看到同样的数据
+
+
+11:31 西安中心 掉线了  等10分钟 到 11：41
+休息 10分钟 到 11：15
+
+++++++++++++++++++++++++
+二、主从同步常用配置参数
+]# vim /etc/my.cnf
+[mysqld]
+选项=值
+:wq
+]# systemctl  restart  mysqld
+2.1 写在masert 数据库服务器配置文件里的参数
+(对所有slave服务器有效)
+binlog_do_db=db1, db2 允许同步的库
+binlog_ignore_db=db9  不允许同步的库
+mysql> show master status;
+
+2.2 写在slave  数据库服务器配置文件里的参数
+(只对slave服务器本机有效)
+replicate_do_db=db2  同步的库
+replicate_ignore_db=studb 不同步的库
+mysql> show  slave status\G;
+
+
+三、主从同步模式：
+3.1 主从同步结构模式:
+一主一从 51（master） 52（slave）
+一主多从 51（master） 52（slave） 53（slave）
+mysql53]# 
+]# vim /etc/my.cnf
+[mysqld]
+server_id=53
+:wq
+]# systemctl restart mysqld
+
+]#mysql  -uroot  -p密码
+mysql> change master to 
+master_host="192.168.4.51",
+    -> master_user="repluser",
+    -> master_password="123qqq...A",
+    -> master_log_file="master51.000004",
+    -> master_log_pos=154;
+mysql> start slave;
+mysql> show slave status\G;
+
+休息 10 分钟到 16：22
+
+主从从 51（master） 52 (slave master) 53(slave)
+1 把主机53 恢复为独立数据库服务器
+
+2 把主机52配置为master数据库服务器  17:35
+]# vim /etc/my.cnf
+[mysqld]
+log_slave_updates
+log-bin=master52
+server_id=52
+binlog_format="mixed"
+:wq
+]#systemctl  restart  mysqld
+]# mysql  -uroot  -p密码
+mysql> grant replication slave on *.*  to repluser@"%"
+identified by "123qqq...A";
+mysql> show master status;
+mysql> show slave status\G;
+
+3、把主机53配置为52的slave服务器
+]# vim /etc/my.cnf
+[mysqld]
+server_id=53
+:wq
+]# systemctl  restart  mysqld
+]# mysql  -uroot -p密码
+mysql>change master to  
+master_host="192.168.4.52",
+master_user="repluser",
+master_password="123qqq...A",
+master_log_file="master52.000001",master_log_pos=441; 
+
+mysql> start slave;
+mysql> show slave status\G;
+
+主主结构（互为主从）  mysql54  < -- > mysql55
+++++++++++++++++++++++++++++++++++++
+3.2 mysql主从同步复制模式
+异步复制模式
+全同步复制模式
+
+半同步复制模式
+查看数据库服务是否允许动态加载模块
+mysql> show  variables  like  'have_dynamic_loading';
+
+查看是否已经安装了模块
+mysql> 
+SELECT  PLUGIN_NAME, PLUGIN_STATUS FROM 
+INFORMATION_SCHEMA.PLUGINS  WHERE PLUGIN_NAME LIKE '%semi%';  
+
+安装模块
+mysql> 
+INSTALL PLUGIN rpl_semi_sync_master 
+SONAME  'semisync_master.so';
+
+mysql> 
+INSTALL PLUGIN rpl_semi_sync_slave
+SONAME  'semisync_slave.so’;  
+
+mysql> 查看功能状态
+ show  variables  like  'rpl_semi_sync_ %_enabled'; 	 
+
+启用功能
+SET GLOBAL rpl_semi_sync_master_enabled = 1;
+SET GLOBAL rpl_semi_sync_slave_enabled = 1;
+
+]#vim /etc/my.cnf
+[mysqld]
+plugin-load = "rpl_semi_sync_master=semisync_master.so;rpl_semi_sync_slave=semisync_slave.so"
+
+rpl-semi-sync-master-enabled = 1
+rpl-semi-sync-slave-enabled = 1
+:wq

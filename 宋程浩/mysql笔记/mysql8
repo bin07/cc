@@ -1,0 +1,84 @@
+NSD DBA2 DAY03
+准备MHA集群环境
+配置51
+
+[root@myql51 ~]# cd /var/lib/mysql
+[root@myql51 mysql]# rm -rf master51.*
+[mysqld]
+character_set_server=utf8
+log_bin=master51
+server_id=51
+binlog_format="mixed"
+plugin-load=rpl_semi_sync_master=semisync_master.so rpl_semi_sync_master_enabled=1
+lpugin-load=rpl_semi_sync_slave=semisync_slave.so rpl_semi_sync_slave_enabled=1
+
+[root@myql51 mysql]# mysql -uroot -p123456
+# rm -rf mysql52-relay-bin.*
+]# rm -rf master52*
+
+mysql> show master status;
+mysql> select user,host from mysql.user where user="repluser";
++----------+------+
+| user     | host |
++----------+------+
+| repluser | %    |
++----------+------+
+mysql> change master to master_host="192.168.4.51",master_user="repluser",master_password="123qqq...A",master_log_file="master51.000001",master_log_pos=154;
+
+mysql>  install plugin rpl_semi_sync_master soname "semisync_master.so";
+mysql> install plugin rpl_semi_sync_slave soname "semisync_slave.so";
+mysql> set global rpl_semi_sync_master_enabled = 1; 
+mysql> set global rpl_semi_sync_slave_enabled = 1;
+mysql> start slave;
+mysql> show slave status\G
+
+mysql> set global relay_log_purge=off;  关闭删除中续日志
+--------------------------------------------------------------------
+安装MHA集群软件包
+# yum -y install perl-*  51-56虚拟机
+# cd mha-soft-student/
+# yum -y install perl-*.rpm
+# ls
+mha4mysql-manager-0.56-0.el6.noarch.rpm
+mha4mysql-node-0.56-0.el6.noarch.rpm
+# rpm -ivh mha4mysql-node-0.56-0.el6.noarch.rpm  51-56 
+# rpm -ivh mha4mysql-manager-0.56-0.el6.noarch.rpm   56 
+#tar -xf mha4mysql-manager-0.56.tar.gz
+#cd mha4mysql-manager-0.56/ 
+root@56 mha4mysql-manager-0.56 #ls
+#perl Makefile.PL
+#make
+# make install
+[root@56 mha4mysql-manager-0.56]# scp -r bin/ /root
+________________________________________________________-
+配置集群 在管理主机56做的
+1、创建集群配置文件
+[root@56 conf]# pwd
+/root/mha4mysql-manager-0.56/samples/conf
+# ls /etc/mha/
+app1.cnf
+
+
+
+2、
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

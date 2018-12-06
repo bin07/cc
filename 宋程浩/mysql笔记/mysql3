@@ -1,0 +1,221 @@
+锁粒度
+表级锁myisam
+行级锁：innodb支持行加锁
+锁类型：读锁（共享锁） 写锁（排他锁 互斥锁）
+select * from t1 where id=2；查找
+insert 插入
+delete 删除
+update 更新
+
+create table t1(name (10))engine=innodb;建立一个名为t1的表存储用innodb
+
+innodb才有事务
+事务：从连上数据库到断开连接的过程
+事务回滚：访问过程中如果有操作错误，自动回到操作前的正确状态
+事务回滚依赖事务日志文件执行的 在上mysql就有3个文件/var/lib/mysql
+ show status like "%lock%";  搜索中间lock的变量
+事务特性（ACID）
+原子性：事务整个操作是一个整体，不可分割，要么全成功，要么都失败
+一致性：事务操作的前后，表中的记录没有变化
+隔离性：事务操作互不影响
+持久性：数据一旦提交，不可改变，永久表数据
+
+事务特性（ACID）
+show variables like "%auto%"; 
+set autocommit=off  改成off关闭 自动提交
+roback;数据回滚 没提交开俩机器第二台没有
+commit;提交数据 提交完就有了
+insert into t1 values("bob");建个bob在ti表
+select * from t1  看t1表里有什么
+
+查寻访问多的表 适合使用myisam存储引擎 节省系统资源
+写访问多的表   适合使用innodb存储引擎 病发访问量大
+
+数据导入：批量把数据存储到数据库里  把文件的内容保存到表里
+load data infile "目录名/文件名"
+show variables like "secure_file_priv"; 这个命令能看见路径
+cd /var/lib/mysql-files/ 进入这个路径
+create table user(name char(30),password char(1),uid int,gid int,comment char(150),homedir char(150),shell char(50));建表 有7个
+desc user; 查看表结构
+system cp /etc/passwd /var/lib/mysql-files/  在mysql里cp
+system ls /var/lib/mysql-files 查看一下
+load data infile "/var/lib/mysql-files/passwd"
+    -> into table db3.user
+    -> fields terminated by ":" 指定分隔符
+    -> lines terminated by "\n"; 导入数据库\n是自动换行
+alter table user add id int primary key auto_increment frist; 添加id表
+select * from user where id>=10; 查看id表大于等于10的
+desc user； 查看表结构
+
+导入文件指定路径
+vim /etc/my.cnf
+secure_file_priv=/mydata
+mkdir /mydata
+chown mysql /mydata
+systemctl restart mysqld
+show variables like "secure_file_priv";  看一下路径
+#######################################################################
+
+管理表记录insert select update delete
+把记录存储到系统文件里
+mysql> select * from db3.user into outfile
+    -> "/mydata/db3_user.txt";
+mysql> system ls /mydata
+db3_user.txt
+mysql> select name,uid,shell from db3.user where id<=5
+    -> into outfile "/mydata/db3_user2.txt"; 导入文件到2.txt里
+mysql> system cat -b /mydata/db3_user2.txt 查询一下
+mysql> select name,uid,shell from db3.user where id<=5 into outfile "/mydata/db3_user3.txt" fields terminated by "@@@"; 用了指定分隔符
+mysql> system cat -b /mydata/db3_user3.txt 查看
+     1	root@@@0@@@/bin/bash
+     2	bin@@@1@@@/sbin/nologin
+     3	daemon@@@2@@@/sbin/nologin
+     4	adm@@@3@@@/sbin/nologin
+     5	lp@@@4@@@/sbin/nologin
+##########################################################################
+mysql> select name,uid,shell from db3.user where id<=5 into outfile "/mydata/db3_user5.txt" lines terminated by "yyyy";
+mysql> system cat -b /mydata/db3_user5.txt
+     1	root	0	/bin/bashyyyybin	1	/sbin/nologinyyyydaemon	2	/sbin/nologinyyyyadm	3	/sbin/nologinyyyylp	4	/sbin/nologinyyyy
+######################################################################
+$$$$$ insert用法
+mysql> insert into user values (50,"bob","x",3001,3001,"test user","/home/bob","/bin/bash"); 在第50行插入
+mysql> insert into user (name,uid,gid) values ("tom",333,444);在插入一条默认下一条51
+
+mysql> select * from user;
+nologin  |
+| 45 | varnish             | x        |  1002 |  1002 |                                                                 | /home/varnish             | /sbin/nologin  |
+| 50 | bob                 | x        |  3001 |  3001 | test user                                                       | /home/bob                 | /bin/bash      |
+| 51 | tom                 | NULL     |   333 |   444 | NULL                                                            | NULL                      | NULL           |
+
+$$$$$$$$$$$  select用法
+mysql> select * from user;查看所有
+mysql> select name,uid from user;查看那么 uid
+mysql> select name,uid from user where uid<=10;对uid有条件
+
+$$$$$$$$$$ updata用法
+mysql> select  password,comment from  user;
+mysql> update user set password="A",comment="student";
+mysql> update user set password="x",comment="root" where id=1;
+mysql> select * from user where id=1;
++----+------+----------+------+------+---------+---------+-----------+
+| id | name | password | uid  | gid  | comment | homedir | shell     |
++----+------+----------+------+------+---------+---------+-----------+
+|  1 | root | x        |    0 |    0 | root    | /root   | /bin/bash |
++----+------+----------+------+------+---------+---------+-----------+
+
+$$$$$$$$$$$$$ delete删除
+mysql> delete from user where shell is null;
+mysql> select  * from user where shell is null;
+
+############################################################
+select / update / delete 匹配条件
+数字比较
+where 字段名 符号 数字
+mysql> select name from user where uid<=10; 查看uid小于等于10
+mysql> select name from user where uid=1; 查看uid等于1
+mysql> select name,uid,gid from user where uid=gid; uid和gid相等
+mysql> select name,uid,gid from user where uid!=gid; uid和gid不相等
+
+= 等于  !=不等于 is null 匹配空  is not null 非空
+mysql> select name,shell from user where shell!="/bin/bash";
+mysql> select id,name from user where uid is null;
+mysql> select id,name,uid from user where uid is not null;
+
+逻辑匹配
+OR 逻辑或 AND 逻辑与 ！逻辑非 （）提高优先级
+mysql> select name,uid,shell from user where name="root"  or uid=1 or shell="/bin/bash"; 有一个成立就行
+###################################################################
+范围内匹配
+in 在..里..      not in 不再..里          between数字1and数字2 在..之间..      distinct 字段名去重显示
+mysql> select name,uid,shell from user where name="root" and uid=1 and shell="/bin/bash";
+mysql> select name from user where name in ("daemo","adm","root","bob");
+mysql> select name,uid from user where uid in (10,20,30,40);
+mysql> select name,uid from user where uid not in (10,20,30,40);
+mysql> select * from user where id between 10 and 20;查看10到20之间的所有
+mysql> select  distinct  name from  user;去除重复的
+
+模糊查询
+where 字段名 like  "通配符" _  %
+mysql> select name  from user where name like "%a%";中间是a的名
+mysql> select name  from user where name like "_a_";中间a的3个字符的名
+mysql> select name  from user where name like "_%_";最少是2个字符的名
+
+#########################################################################
+正则表达式
+where ^ $ . [] * |
+mysql> select name  from user where name regexp '^a|^t';regexp代表正则表达式
+
+mysql> select name,uid  from user where uid regexp '....';4个以上也显示
++-----------+-------+
+| name      | uid   |
++-----------+-------+
+| nfsnobody | 65534 |
+| lisi      |  1000 |
+| nginx     |  1001 |
+| varnish   |  1002 |
+| bob       |  3001 |
++-----------+-------+
+mysql> select name,uid  from user where uid regexp '^....$';4个符号的
++---------+------+
+| name    | uid  |
++---------+------+
+| lisi    | 1000 |
+| nginx   | 1001 |
+| varnish | 1002 |
+| bob     | 3001 |
++---------+------+
+mysql> select name,uid  from user where name regexp '^n.*x$';以n开头x结尾的名
++-------+------+
+| name  | uid  |
++-------+------+
+| nginx | 1001 |
++-------+------+
+四则运算
+字段必须是数值类型 + - * /  %取余数(求模)
+mysql> update user set uid=uid+1,gid=gid-1;
+mysql> select name,uid,gid from user;
++---------------------+-------+-------+
+| name                | uid   | gid   |
++---------------------+-------+-------+
+| root                |     1 |    -1 |
+| bin                 |     2 |     0 |
+| daemon              |     3 |     1 |
+mysql> alter table user add age int default 18 after name;
+加一个年龄age
+mysql> select name,age,2018-age as  sart from user where name="root";
+计算那一年出生的 as是创建一个文件 叫start
++------+------+------+
+| name | age  | sart |
++------+------+------+
+| root |   18 | 2000 |
++------+------+------+
+mysql> select name,(uid+gid)/2 pjz from user where name="bin";
+uid和gid值除2 放在pjz文件夹里 
++------+--------+
+| name | pjz    |
++------+--------+
+| bin  | 1.0000 |
++------+--------+
+mysql> select name,uid from user where name="root" and uid=1 or uid=2;
+先判断与(and)在判断或(or) 
+mysql> select name,uid from user where name="root" and (uid=1 or uid=2);
+()是提高优先级的
+
+###############################################################
+查询结果排序
+order by 字段名 [asc]
+mysql>select name,uid from user order by uid ;排序默认正着排序后面家desc反着排序
+mysql>select shell from user where uid>10 and id<=2000 group by shell 查找user表中uid大于10 id小于2000查询结果分组
+
+查寻结果过滤
+sql查询 having 条件
+mysql>select name from user shell!="/bin/bash" having name="mysql";在查询结果里又找了个结果
+
+
+
+
+
+
+
+
+

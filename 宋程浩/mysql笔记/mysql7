@@ -1,0 +1,183 @@
+一、mysql读写分离
+1、读写分离介绍：数据读写分离  客户访问的数据 查询访问 写入访问分给不同数据库服务器处理
+      
+            客户段连接C  
+             ------->C  C把数据分给AB    做读写分离
+
+  select------->A   inster------>B   AB做主从关系
+
+2、数据读写分离的好处 坏处
+好处：减少并发 提高利用率
+坏处：C坏了 单点故障 影响
+-------------------------------------------------------------
+在57上运行数据读写分离服务，度访问给52处理，写访问给51处理
+配置：
+1、部署mysql 一主51一从52 同步结构
+2、部署57读写分离服务器
+mycat maxscale mysql-proxy 
+2.1、装包maxscale  scp来的
+     配置#vim /etc/maxscale.cnf
+[maxscale]           定义后线程的数量
+threads=auto       默认1 根据cpu配置
+
+  [server1]          ip
+  type=server1                名称  
+  address=192.168.4.51        数据库的ip
+  port=3306                   端口  
+  protocol=MySQLBackend
+
+  type=[server2]                名称
+  address=192.168.4.52        数据库的ip
+  port=3306                   端口
+  protocol=MySQLBackend  
+  
+
+  [MySQL Monitor]   定义监视的数据库 主从是否正常 监视谁是主库 谁是从库
+  type=monitor
+  module=mysqlmon
+  servers=server1, server2      主、从数据库
+  user=scalemon                 添加授权用户                 
+  passwd=123qqq...A                              
+  monitor_interval=10000         
+
+
+53#[Read-Only Service]  指定查询权限 注释掉
+  #type=service
+  #router=readconnroute
+  #servers=server1
+  #user=myuser
+  #passwd=mypwd
+  #router_options=slave
+
+ 64 [Read-Write Service]        定义读写分离服务  名称      
+ 65 type=service   
+ 66 router=readwritesplit       调用的软件
+ 67 servers=server1, server2    在1 2 运行 指定数据库服务器
+ 68 user=pljadmin               用户名  
+ 69 passwd=123qqq...A           密码  
+ 70 max_slave_connections=100%  
+
+ [Read-Write Listener]          定义数据读写服务使用端口号
+ type=listener
+ service=Read-Write Service
+ protocol=MySQLClient
+ port=4006
+
+
+  [MaxAdmin Listener]           定义管理服务的端口号   
+ type=listener
+ service=MaxAdmin Service
+ protocol=maxscaled
+ socket=default
+ port=4026
+ 
+    根据设置添加用户  
+    51 52 scalemon  123qqq...A
+    mysql> grant replication slave,replication client on *.* to scalemon@"%" identified by "123qqq...A";  监视权限
+
+
+    51 52 pljadmin  123qqq...A
+    mysql> grant select on mysql.* to pljadmin@"%" identified by "123qqq...A";
+
+mysql> select host,user from mysql.user; 查看授权用户
+
++---------------+-----------+
+| host          | user      |
++---------------+-----------+
+| %             | pljadmin  |
+| %             | maxscale  |
+| %             | root      |
+| %             | scalemon  |
+| %             | yaya100   |
+| 192.168.4.%   | webadmin2 |
+| 192.168.4.254 | webadmin  |
+| localhost     | mysql.sys |
+| localhost     | root      |
++---------------+-----------+
+
+
+    起服务
+   [root@57 ~]# maxscale -f  /etc/maxscale.cnf       
+   [root@57 ~]# netstat -antulp | grep maxscale
+tcp        0      0 192.168.4.57:35894      192.168.4.51:3306       ESTABLISHED 6218/maxscale       
+tcp        0      0 192.168.4.57:44432      192.168.4.52:3306       ESTABLISHED 6218/maxscale       
+tcp6       0      0 :::4026                 :::*                    LISTEN      6218/maxscale       
+tcp6       0      0 :::4006                 :::*                    LISTEN      6218/maxscale  
+[root@57 ~]# killall -9 maxscale     杀maxscale程
+[root@57 ~]# netstat -antulp | grep 3306   如果有3306杀死
+[root@57 ~]# systemctl stop mysqld.service 
+                                            
+----------------------------------------------------------------   
+3、在客户段验证
+1、在57访问管理服务查看管理信息
+[root@57 ~]# maxadmin -uadmin -pmariadb -P4026
+MaxScale> list servers
+Servers.
+-------------------+-----------------+-------+-------------+--------------------
+Server             | Address         | Port  | Connections | Status              
+-------------------+-----------------+-------+-------------+--------------------
+server1            | 192.168.4.51    |  3306 |           0 | Master, Running
+server2            | 192.168.4.52    |  3306 |           0 | Slave, Running
+-------------------+-----------------+-------+-------------+--------------------
+
+
+
+2、在客户端50访问57对数据做访问，测试是否能实现读写分离
+[root@mysql50 ~]# mysql -h192.168.4.57 -P4006 -uyaya100 -p123qqq...A
+--------------------------------------------------------------
+多实例: 在一台物理主机上运行多个数据库服务
+节约运维成本  提高硬件利用率
+1、# yum -y install gcc gcc-c++
+   # tar -xf mysql-5.7.20-linux-glibc2.12-x86_64.tar.gz 
+   # mv mysql-5.7.20-linux-glibc2.12-x86_64 /usr/local/mysql
+   # cd /usr/local
+   # ls mysql
+  bin  COPYING  docs  include  lib  man  README  share  support-files
+   #cd mysql
+   # mv /etc/my.cnf /root/
+   # vim /etc/my.cnf
+   [mysqld_multi]                           启用多实列
+mysqld=/usr/local/mysql/bin/mysqld_safe      指定进程文件路径
+mysqladmin=/usr/local/mysql/bin/mysqladmin  指定管理命令路径
+user=root                                   指定进程用户
+
+[mysqld1]                              实列进程名称，
+port =3307                            端口号
+datadir=/data3307                     数据库目录，手动建 
+socket=/data3307/mysql.sock          sock文件的路径和名称 同过这个文建登陆数据库
+pid-file=/data3307/mysqld.pid         pid文件位置 进程id的文件位置  
+log-error=/data3307/mysqld.err        错误日志位置
+
+
+[mysqld2]
+port =3308
+datadir=/data3308
+socket=/data3308/mysql.sock
+pid-file=/data3308/mysqld.pid
+log-error=/data3308/mysqld.err
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

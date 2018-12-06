@@ -1,0 +1,221 @@
+一、安全策略配置 ——
+1. 配置SELinux
+SELinux（Security-Enhanced Linux），安全增强的Linux系统（保护机制），集成到Linux内核（2.6及以上）中运行。
+是美国NSA提出来的，集成了一套（比如红帽公司预先配置的target/mls）保护文档、用户、进程等资源对象的安全策略
+
+运行模式：
+enforcing，强制生效（内核加载SELinux机制，并且启用保护）
+permissive，宽松（内核加载SELinux机制，只记录不保护）
+disabled，禁用（内核不加载SELinux机制）
+
+# vim  /etc/selinux/config
+SELINUX=运行模式
+C(大写)：删除光标之后到行尾，并且进入插入模式。
+
+临时切换SELinux模式：
+setenforce  1 		==》由permissive变为enforcing
+setenforce  0 		==》由enforcing变为permissive
+getenforce
+
+
+2. 配置SSH访问
+用途：sshd服务端为客户机提供远程的 安全的Shell终端。
+软件包（S）：openssh-server  sshd
+软件包（C）：openssh-clients  ssh
+
+服务端配置文件： /etc/ssh/sshd_config
+......
+
+# vim  /etc/ssh/sshd_config
+.. ..
+AllowUsers  用户名1@客户机地址1    用户名2@客户机地址2  
+或者
+DenyUsers  用户名1@客户机地址1    用户名2@客户机地址2  
+
+# systemctl restart  sshd
+
+3. 自定义用户环境（别名设置）
+
+命令别名，为复杂的命令行设置简短的名称（在用户环境中，为一个复杂的 需要经常使用的命令行所起的短名称。可用来替换普通命令，更加方便）
+创建别名：
+alias  [别名='实际执行的复杂的命令行']
+查看已设置的别名：
+alias
+取消已设置的别名：
+unalias [别名名称]
+
+用户登录（通常进入/bin/bash命令环境）后自动执行XXX操作：
+# vim  /etc/bashrc  			【~/.bashrc】
+XXX操作
+alias  别名='实际执行的复杂的命令行'
+alias qstat='/bin/ps -Ao pid,tt,user,fname,rsz'
+
+# 验证结果（退出重登录，或以其他用户登录）
+
+4.  配置防火墙端口转发
+5423 ==》80
+
+http://server0.example.com:5423/
+http://server0.example.com/
+
+防火墙服务：firewalld
+
+实现端口转发必须用到防火墙
+默认开启的防火墙服务只允许访问sshd，其他访问都拒绝
+
+预配置的安全区：
+public —— 只允许访问本机的sshd等少数几个服务，其他都拒绝
+trusted —— 信任区，允许任何访问
+block —— 拒绝任何访问
+drop —— 丢弃任何来访的数据包
+home、internal、……
+
+数据包要进入到内核必须要通过这些zone中的一个，而不同的zone里定义的规则不一样（即信任度不一样，过滤的强度也不一样）。可以根据网卡所连接的网络的安全性来判断，这张网卡的流量到底使用哪个zone。
+如果一个客户端访问服务器，服务器根据以下原则决定使用哪个 zone 的策略去匹配。
+1.如果一个客户端数据包的源 IP 地址匹配 zone 的 sources，那么该 zone 的规则就适用这个客户端；一个源只能属于一个zone，不能同时属于多个zone。
+【如果同一个源同时给多个zone设立，会报错——Error: ZONE_CONFLICT】
+2.如果一个客户端数据包进入服务器的某一个接口（如eth0）区配zone的interfaces，则么该 zone 的规则就适用这个客户端；一个接口只能属于一个zone，不能同时属于多个zone。
+3.如果上述两个原则都不满足，那么缺省的 zone 将被应用
+
+配置位置：
+运行时配置（runtime）
+永久配置（permanent）
+
+策略配置工具：
+firewall-cmd、firewall-config
+
+
+firewall-cmd的基本用法 ——
+firewall-cmd  --list-all
+firewall-cmd  --list-all-zones
+firewall-cmd  --get-default-zone 
+firewall-cmd  --set-default-zone=区域名   [针对“运行时/永久配置”均有效]
+firewall-cmd  [--permanent]  --zone=安全区名  --add-source=来源网段地址  --add-service=服务名
+firewall-cmd --permanent --zone=trusted  --add-forward-port=被转发端口配置:协 议配置:目标端口配置
+firewall-cmd --permanent --zone=trusted  --add-forward-port=port=被转发端口:proto=协议名:toport=目标端口
+
+
+
+配置防火墙策略：
+在server0上 ——
+1）允许访问本机的所有端口
+# firewall-cmd  --set-default-zone=trusted
+2）拒绝指定的网段
+# firewall-cmd  --permanent  --zone=block  --add-source=172.34.0.0/24
+3）实现5423==》80端口转发
+# firewall-cmd  --permanent --zone=trusted --add-forward-port=port=5423:proto=tcp:toport=80
+# firewall-cmd  --reload
+
+在desktop0上 ——
+1）允许访问本机的所有端口
+# firewall-cmd  --set-default-zone=trusted
+2）拒绝指定的网段
+# firewall-cmd  --permanent  --zone=block  --add-source=172.34.0.0/24
+
+
+二、网络连接配置 ——
+5. 配置链路聚合
+网卡 bond ==》team 
+将多个网卡捆绑成一个虚拟网卡，共用同一个IP地址（负载均衡、热备份）
+
+运行器的类型切换（参考 man  teamd.conf  查找/example）
+轮询负载的流量负载均衡 —— roundrobin
+热备份连接冗余 —— activebackup
+
+nmcli配置聚合连接的基本过程 ——
+1）创建聚合连接（组队）
+# nmcli con add type team con-name Team1 ifname Team1 config '{工作模式}'
+2）为聚合连接添加成员网卡（组员）
+# nmcli con add type team-slave con-name Team1-slave1 ifname 物理网卡名1   master Team1
+# nmcli con add type team-slave con-name Team1-slave2 ifname 物理网卡名2   master Team1
+3）配置IP地址相关参数
+# nmcli con mod  Team1  ipv4.method  manual  ipv4.addresses  "172.16.3.20/24"  connection.autoconnect  yes
+# nmcli con mod  Team1-slave1  connection.autoconnect  yes
+# nmcli con mod  Team1-slave2  connection.autoconnect  yes
+
+4）激活聚合连接
+# nmcli con  up  Team1 
+
+
+检查聚合连接状态：
+# teamdctl  Team1  state
+
+
+获取命令操作帮助信息：
+# man  nmcli-examples ==》查找 /Team1
+Example 7. Adding a team master and two
+       slave connection profiles
+           $ nmcli con add type team con-name Team1 ifname Team1 config team1-master-json.conf
+           $ nmcli con add type team-slave con-name Team1-slave1 ifname em1 master Team1
+           $ nmcli con add type team-slave con-name Team1-slave2 ifname em2 master Team1
+
+
+获取工作模式写法帮助信息：
+# man  teamd.conf  ==》/"runner
+
+"runner": {"name": "roundrobin"}
+或
+"runner": {"name": "activebackup"}
+
+
+关于群公告提供的 VMware虚拟机环境：
+server0、desktop0都没有提供eth1、eth2
+
+可以在server0上执行 lab  teambridge  setup 操作，会自动添加两块虚拟网卡 eno1、eno2
+或者
+自行另外准备两个虚拟机，分别为这两个虚拟机添加第2、3块网卡
+
+6. 配置IPv6地址
+第4版IP协议，32个二进制位
+第6版IP协议，128个二进制位，让地球上每一颗沙子都有独立地址
+
+IPv4地址，172.25.0.11（点分十进制）
+IPv6地址，2003:ac18::305（冒号分十六进制）
+
+:::::::
+2003:ac18:0000:0000:0000:0000:0000:0305
+
+简写规则：
+前置的0可以省略
+某一段全部都是0，都可以省略
+连续多个冒号，可以只保留一对
+
+配置IPv6地址的方法：
+# nmcli  connnection  modify  "连接名"  ipv6.method  manual  ipv6.addresses  "IPv6地址/掩码长度"
+# nmcli  connnection  up  "连接名"
+
+检查目标IPv6地址是否可连通：
+ping6  目标IPv6地址
+
+常见问题：
+配了IPv6地址的系统，重起后主机名变为localhost.localdomain
+原因：
+未固定主机名的系统，如果只有一个非回环IP地址，则自动采用从DNS查到的主机名；如果DNS查不到，或者有多个非回环IP地址，则采用默认主机名localhost.localdomain
+解决办法：
+为两个主机设置正确的、静态的主机名
+
+三、配置邮件服务器 ——
+7. 配置本地邮件服务
+
+四、配置文件服务器/客户端 
+8. 通过Samba发布共享目录
+9. 配置多用户Samba挂载
+10. 配置NFS共享服务
+11. 挂载NFS共享
+19. 配置iSCSI服务端
+20. 配置iSCSI客户端
+
+五、配置网站服务器 ——
+12.实现一个web服务器
+13.配置安全web服务
+14.配置虚拟主机
+15.配置web内容的访问
+16.实现动态WEB内容
+
+六、Shell脚本编程 —— 
+17. 创建一个脚本
+18. 创建一个添加用户的脚本
+
+七、配置及管理数据库 ——
+21. 配置一个数据库
+22. 数据库查询（填空）

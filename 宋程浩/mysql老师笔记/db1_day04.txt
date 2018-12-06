@@ -1,0 +1,232 @@
+复制表 
+命令格式?
+作用：1  备份表   2 快速建表
+
+mysql> create database db4;
+
+mysql> create table db4.user2 select  * from db3.user;
+mysql> select * from  db4.user2;
+mysql> desc db4.user2;
+
+mysql> create  table db4.user select  * from db3.user
+    -> where 1=2;
+
+mysql> desc db4.user;
+mysql> select  * from db4.user;
+
+mysql> create table db4.t1 select name,uid,gid 
+from db3.user limit 3;
+
+mysql> desc db4.t1;
+mysql> select * from db4.t1;
+ 
+多表查询
+
+
+格式1
+mysql> use db4;
+mysql> create table t2  select name,uid,shell from
+    -> db3.user limit 3;
+
+mysql> create table t3  select name,uid,homedir 
+from db3.user limit 5;
+
+mysql> select  * from t2  ;  select  * from t3;
+
+mysql> select  *  from  t2,t3 ;
+mysql> select  *  from  t2,t3 where  t2.uid = t3.uid; 
+
+mysql> select  t2.name,t3.name  from  t2,t3 
+where  t2.uid = t3.uid; 
+
+mysql> select  t2.name  from  t2,t3 where  t2.uid = t3.uid; 
+休息10分钟到 11：10
+
+方法2 where子查询
+mysql> select name,uid from user2 
+where  uid > (select avg(uid) from user2);
+
+mysql> select name from db3.user
+    -> where
+    -> name in (select name from db4.t2);
+
+方法3 连接查询
+mysql> create table db4.t4 
+    -> select name,uid,shell,homedir from db3.user 
+    -> limit 8;
+mysql> select  * from db4.t4;
+mysql> create table db4.t5
+    -> select name,uid,shell,homedir from  db3.user
+    -> limit 12;
+mysql> select  * from  t4 left join t5  on t4.uid = t5.uid;
+
+mysql> select  t4.name,t5.name,t4.uid,t5.uid 
+from  t4 left join t5  on t4.uid = t5.uid;
+
+mysql> select  * from  
+t4 right join t5  on t4.uid = t5.uid;
+
+mysql> select  t4.name,t5.name 
+from  t4 right join t5  on t4.uid = t5.uid;
+
+++++++++++++++++++++++++++++++++++++
+]# rpm  -q httpd
+]# rpm  -q php
+]# rpm  -q php-mysql
+]# rpm -qa  | grep  -i mysql
+]# yum -y  install httpd php php-mysql
+]# systemctl start httpd
+]# systemctl enable httpd
+]#vim /var/www/html/test.php
+<?php
+phpinfo();
+?>
+在真机 访问 50主的网页文件 http://192.168.4.50/test.php
+]# tar -zxvf phpMyAdmin-2.11.11-all-languages.tar.gz  -C /var/www/html/
+]# cd /var/www/html/
+]# mv phpMyAdmin-2.11.11-all-languages/ phpmyadmin
+]# chown  -R apache:apache phpmyadmin
+]# cd phpmyadmin/
+]# cp config.sample.inc.php config.inc.php
+]#vim config.inc.php
+17 $cfg['blowfish_secret'] = 'plj123';
+31 $cfg['Servers'][$i]['host'] = 'localhost';
+:wq
+在真机 访问 50主的网页文件 http://192.168.4.50/phpmyadmin
+用户名 root 密码123456
+
+++++++++++++++++++++++++++++++++
+修改数据库管理员本机登陆密码
+]# mysqladmin  -hlocalhost -uroot -p password "654321"
+Enter password: 输入当前密码
+
+恢复MySQL管理密码
+]# systemctl  stop mysqld
+]#vim /etc/my.cnf
+[mysqld]
+skip-grant-tables
+#validate_password_policy=0
+#validate_password_length=6
+:wq
+
+]# systemctl  start mysqld
+]# mysql
+mysql> update mysql.user
+    -> set  authentication_string=password("123456")
+    -> where
+    -> user="root" and host="localhost";
+mysql> flush privileges;
+mysql> quit;
+
+]# systemctl  stop mysqld
+]#vim /etc/my.cnf
+[mysqld]
+#skip-grant-tables
+validate_password_policy=0
+validate_password_length=6
+:wq
+]# systemctl  start mysqld
+]# mysql  -uroot  -p123456
+mysql>            休息10分钟到 16：05
+
++++++++++++++++++++++
+grant 用户授权
+
+]# mysql -uroot -p123456
+mysql>
+grant  all  on db4.user2   to  webadmin@"192.168.4.254"  identified by  "123456";
+
+mysql>
+grant all on  *.*  to root@"%" identified by  "123456" with grant option;
+
+mysql>
+grant  all on  db3.* to admin@"localhost" 
+identified by  "123456";
+
+在数据库服务器50本机验证授权的admin用户
+]# mysql  -uadmin   -p123456
+mysql> show  grants;
+mysql> select user();
+
+
+在客户端测试50数据库服务器授权root用户
+
+51]# mysql  -h192.168.4.50  -uroot  -p123456
+mysql> show grants;
+mysql> grant  select,insert,update(name,uid) 
+    -> on db4.user2  to webadmin2@"192.168.4.%"
+    -> identified by "123456";
+mysql> show databases;
+mysql> drop  database db1;
+mysql> select  * from db2.t1;
+mysql> quit
+
+
+51]# mysql -h192.168.4.50 -uwebadmin2  -p123456
+mysql> select user();
+mysql> show grants;
+mysql> 
+
+休息10分钟  到 17：14
+
+++++++++++++++++++++++++++++++++++++
+撤销权限
+
+mysql> select host,user from mysql.user;
+
+mysql> show grants for  webadmin2@"192.168.4.%";
+
+mysql> revoke insert,update(name,uid) on db4.user2 
+from webadmin2@"192.168.4.%";
+
+mysql> show grants for  webadmin2@"192.168.4.%";
+  
+mysql> show grants for  root@"%";
+mysql> revoke grant option  on *.* from root@"%";
+
+mysql> show grants for  root@"%";
+
+mysql> revoke all  on *.* from root@"%";
+
+mysql> show grants for  root@"%";
+
+mysql> drop user root@"%";
+
+mysql> select host,user from mysql.user;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

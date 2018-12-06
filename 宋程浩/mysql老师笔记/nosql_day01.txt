@@ -1,0 +1,99 @@
+NoSQL_day01
+一、部署Redis服务
+1. 装包 （ 时间5分钟 到 09：32）
+]#rpm -q gcc 
+]#tar -zxvf redis-4.0.8.tar.gz 
+]#cd redis-4.0.8/
+]#make
+]#make install
+2. 初始化配置 （ 时间5分钟 到 09：44）
+]# cd redis-4.0.8
+]# ./utils/install_server.sh
+
+3. 查看服务运行状态
+]# netstat  -utnlp  | grep  :6379
+
+停止服务 ]# /etc/init.d/redis_6379 stop
+启动服务 ]# /etc/init.d/redis_6379 start
+查看状态 ]# /etc/init.d/redis_6379 status
+
+4. 连接服务
+]# redis-cli
+
+5. 存储数据
+127.0.0.1:6379> set name bob
+OK
+127.0.0.1:6379> get name
+"bob"
+127.0.0.1:6379> get age
+(nil)
+127.0.0.1:6379> keys *
+1) "name"
+127.0.0.1:6379> get name
+"bob"
+6. 断开连接
+127.0.0.1:6379> exit
+
+休息 10分钟到  11：20
+
+1.2 配置文件解析
+]# redis-cli -p 6350  shutdown
+
+]# vim /etc/redis/6379.conf
+port 6350
+bind 192.168.4.50
+:wq
+
+]# /etc/init.d/redis_6379 start
+]# netstat -utnlp  | grep  :6350
+]# redis-cli  -h 192.168.4.50 -p 6350
+]# redis-cli -h 192.168.4.50  -p 6350  shutdown
+
+++++++++++++++++++++++++++++++++
+给redis服务设置连接密码
+]# redis-cli  -h 192.168.4.50 -p 6350  shutdown
+
+]#vim /etc/redis/6379.conf
+501 requirepass 123456    //定义连接密码
+:wq
+
+]# redis-cli -h 192.168.4.50 -p 6350 -a 123456
+> keys *
+> exit
+]# redis-cli -h 192.168.4.50 -p 6350 -a 123456 shutdown
+
+修改脚本使其可以使用脚本停止服务
+vim  /etc/init.d/redis_6379
+43 $CLIEXEC -h 192.168.4.50 -p 6350 -a 123456 shutdown
+:wq
+
+]# /etc/init.d/redis_6379 start
+]# /etc/init.d/redis_6379 stop
++++++++++++++++++++++++++++++
+在主机51上部署redis服务: 服务器启动 修改服务
+使用的ip地址 端口号 并设置连接密码。
+
+休息15分钟 到  16：05
+
+二、部署LNMP+Redis
+在主机192.168.4.56 上部署 nginx服务, 并可以解释 php 代码 
+
+nginx-1.12.2.tar.gz
+php-devel-5.4.16-42.el7.x86_64.rpm
+php-fpm-5.4.16-42.el7.x86_64.rpm
+php-redis-2.2.4.tar.gz
+
+
+/usr/lib64/php/modules/
+redis.so
+
+
+
+
+
+
+
+
+
+
+

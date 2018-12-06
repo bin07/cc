@@ -1,0 +1,80 @@
+正则表达式练习：
+
+过滤下载文件中包含the关键字
+[root@room9pc01 桌面]# grep "the" shell-grep.txt 
+
+过滤下载文件中不包含the关键字
+[root@room9pc01 桌面]# grep -v "the" shell-grep.txt 
+
+过滤下载文件中不论大小写the关键字
+[root@room9pc01 桌面]# grep -i "the" shell-grep.txt 
+
+过滤test或taste这两个单字
+[root@room9pc01 桌面]# grep "t[ae]ste\{0,1\}"  shell-grep.txt 
+[root@room9pc01 桌面]# grep "t[ae]ste*"  shell-grep.txt 
+
+过滤有oo的字节
+[root@room9pc01 桌面]# grep "oo" shell-grep.txt
+
+过滤不想要oo前面有g的
+[root@room9pc01 桌面]# grep "[^g]oo" shell-grep.txt 
+[root@room9pc01 桌面]# grep "[^go]oo" shell-grep.txt 
+
+过滤oo前面不想有小写字母
+[root@room9pc01 桌面]# grep "[^a-z]oo" shell-grep.txt
+
+过滤有数字的那一行
+[root@room9pc01 桌面]# grep "[0-9]" shell-grep.txt 
+
+过滤以the开头的
+[root@room9pc01 桌面]# grep "^the" shell-grep.txt 
+
+过滤以小写字母开头的
+[root@room9pc01 桌面]# grep "^[a-z]" shell-grep.txt
+
+过滤开头不是英文字母
+[root@room9pc01 桌面]# grep "^[^a-Z]" shell-grep.txt
+
+过滤行有小数点 . 那一行
+[root@room9pc01 桌面]# grep "\." shell-grep.txt 
+
+过滤行以小数点.结尾那一行
+[root@room9pc01 桌面]# grep "\.$" shell-grep.txt 
+
+过滤空白行
+[root@room9pc01 桌面]# grep "^$"  shell-grep.txt 
+[root@room9pc01 桌面]# grep -v "^$" shell-grep.txt 
+
+
+过滤出一行中有gd的，但是gd之间有任意个字符
+[root@room9pc01 桌面]# grep "g.*d"  shell-grep.txt 
+
+
+过滤至少两个o以上的字串
+[root@room9pc01 桌面]# grep "oo\{1,\}"  shell-grep.txt 
+
+[root@room9pc01 桌面]# grep "oo\{2,\}"  shell-grep.txt 
+
+过滤g开头但是这一行还存在有一个g，两个g之间仅存在至少一个o
+[root@room9pc01 桌面]# grep "g.*o.*g"  shell-grep.txt
+
+过滤两个o的字串
+[root@room9pc01 桌面]# grep  "oo\{1\}"  shell-grep.txt 
+
+过滤g后面接2到5个o，然后在接一个g的字串
+[root@room9pc01 桌面]# grep "go\{2,5\}g" shell-grep.txt 
+
+过滤g后面接2个以上o的
+[root@room9pc01 桌面]# grep "go\{2,\}g" shell-grep.txt 
+
+
+
+
+
+
+
+
+
+
+
+

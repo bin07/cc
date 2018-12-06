@@ -1,0 +1,227 @@
+把/etc/passwd 文件的内容存储到db9库下的user表里 
+15分钟 到 09：24
+
+mysql> create view v1 as select  name,uid,shell 
+from user where shell="/bin/bash";
+
+
+mysql> grant select on db9.v1  to  yaya300@"localhost"
+    -> identified by "123qqq...A";
+
+]# mysql -uroot  -p123qqq...A
+mysql> 对user表做 update  delete  insert 操作
+mysql> 对v1表做 update  delete  insert 操作，
+user表数据也会改变.
+
+[root@localhost ~]# mysql -uyaya300 -p123qqq...A
+mysql> 当基表发生改变时 视图表v1 的数据也会改变
+
+
+
+休息到  10：25
+
+mysql>create table t1
+select name,uid,shell from user limit 3;
+
+
+mysql>create table t2  
+select name,uid,homedir,shell from user limit 6;
+
+
+select *  from t1,t2 where t1.name=t2.name;
+
+mysql> create  view v3(a,b,c,d,e,f,g) as 
+select *  from t1,t2 where t1.name=t2.name;
+
+mysql> select  * from v3;
+
++++++++++++++++++++++++++++++
+查询记录时给字段定义别名、 表定义别名 例子 
+select  a.name as aname , b.name as bname , a.uid as auid , b.uid as  buid   from user a left join info b on a.uid=b.uid;
+
+
+mysql> create view v4 as 
+select t1.name as aname,t2.name as bname 
+from t1,t2 where t1.name=t2.name;
+
+mysql> select  * from  v4;
+
++++++++++++++++++++++++++++++++++++++++
+mysql> select * from user2;mysql> create table user2
+    -> select  name,uid,gid,homedir,shell 
+    -> from user
+    -> where uid between 10  and  50;
+mysql> select  * from user2;
+
+
+
+ql> create view v7
+    -> as
+    -> select name,uid from user where uid<=1000;
+
+mysql> create view v8 
+    -> as
+    -> select  * from v7 where uid >500 
+       with check option;
+
+休息10分钟  到  15：15
+
++++++++++++++++++++++++++++++++
+mysql> use db9;
+mysql> delimiter //
+mysql> create procedure p1()
+  begin
+   select count(name) from  db9.user where shell="/bin/bash";
+  end
+  //
+
+mysql> delimiter ;
+
+mysql> call  p1();
+
+mysql> select db,name,body,type from mysql.proc 
+where name="p1"\G;
+
+mysql> drop procedure p1;
+
+休息 10分钟  到  16：15
++++++++++++++++++++++++++++++++
+mysql> show session variables like "%buffer%";
+mysql> set session sort_buffer_size = 40000; 
+
+mysql> show variables  like "%connect%";
+mysql> select  @@hostname;
+
+mysql> set @x=9;
+mysql> select @x;
+
+mysql> set @name="yaya";
+mysql> select @name;
+++++++++++++++++++++++++++++
+delimiter //
+create procedure db9.p2()
+begin
+  declare  x int;
+  set x=9;
+  select x;
+  select  * from db9.user where id=x;
+end
+//
+delimiter ;
+
+call  p2();
+
+mysql> select name into @x from db9.user where id=1;
+mysql> select  @x;
+++++++++++++++++++++++++++
+mysql> delimiter //
+mysql> create procedure db9.p3()
+begin
+   declare y int default 1;
+   declare x int ;
+   set x = 10
+   select  y;
+   select  x
+   select  count(id) into y from db9.user;
+   select y;
+end
+//
+delimiter ;
+
+mysql>  call  db9.p3();
+休息 10 分钟  到  17：11 
++++++++++++++++++++++++
+delimiter //
+create procedure db9.p6(in shellname char(30))
+begin
+   declare x int default 0;
+select count(name) into x from db9.user where shell=shellname;
+   select  x;
+end
+//
+delimiter ;
+
+call db9.p6("/bin/bash");
+call db9.p6("/sbin/nologin");
+
+mysql> set @x="/bin/bash";
+mysql> call db9.p6(@x);
+
+++++++++++++++++++++++++
+delimiter //
+create procedure db9.p7(in shellname char(30),out number int )
+begin
+   select count(name) into number from db9.user where shell=shellname;
+   select  number;
+end
+//
+delimiter ;
+
+set @z=7;
+call db9.p7("/bin/bash",@z);
+++++++++++++++++++++++++
+delimiter //
+create procedure db9.p8(inout x char(30))
+begin
+   select x;
+   select name into x from db9.user where id=1;
+   select x;
+end
+//
+delimiter ;
+
+set @y="abc";
+call db9.p8(@y);
+
+
++++++++++++++++++++++
+delimiter //
+create procedure x()
+begin
+end
+//
+delimiter ;
+
+
++++++++++++++++++++++++++
+delimiter //
+create  procedure p259()
+begin
+    declare i int;
+    set i=0;
+    loab1:loop
+       set i=i+1;
+       if  i = 5 then
+          ITERATE loab1;
+       end if;
+       if i = 11 then
+         LEAVE loab1;
+       end if;
+       select  i;
+    end loop;
+end
+//
+delimiter ;
+
+mysql> drop procedure  say;
+mysql> delimiter //
+mysql> create  procedure say()
+    -> begin
+    -> declare i int;
+    -> set i=1;
+    -> loab1:loop  #给loop循环定义标签名称为 loab1
+    ->    select i;
+    ->    set i=i+1;
+    ->    if  i=3  then  #变量i的值加到3的时候 结束循环
+    ->      LEAVE loab1;
+    ->    end if;
+    -> end loop;
+    -> end
+    -> //
+Query OK, 0 rows affected (0.02 sec)
+
+mysql> delimiter ;
+
+
+
+

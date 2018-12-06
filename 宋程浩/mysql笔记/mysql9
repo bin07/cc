@@ -1,0 +1,3 @@
+load data infile  "/var/lib/mysql-files/passwd" into table db9.user filelds terminated by ":" lines terminated by "\n";
+ystem cp /etc/passwd /var/lib/mysql-files/
+load data infile  "/var/lib/mysql-files/passwd" into table db9.user fields terminated by ":" lines terminated by "\n";

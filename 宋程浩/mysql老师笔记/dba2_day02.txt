@@ -1,0 +1,216 @@
+一、MySQL读写分离
+1. 读写分离介绍：把客户端访问数据的查询访问 和 写入数据的访问
+分别给不同数据库服务器处理
+
+2 配置数据读写分离的好处 和 坏处
+
+               client50]# mysql  -h57  -uyaya100  -p123qqq...A
+                    |
+                  mycat57]#
+                  mysql>select ----> mysql52
+                  mysql>insert -----> mysql51
+
+------------------------------------------
+        |                      |
+      mysql52                mysql51
+      slave                   master
+
+休息10分钟到 10：22
+
+在主机192.168.4.57运行数据读读写分离服务写分离服务，把读访问给主机mysql52处理 
+把写访问给主机mysql51处理.
+配置步骤：
+1 部署mysql 一主51 一从52 同步结构
+
+2 部署数据读写分离服务器192.168.4.57
+
+mysql中间件 mycat  maxscale  mysql-proxy
+
+2.1 装包 
+]#rpm -ivh  maxscale-2.1.2-1.rhel.7.x86_64.rpm
+
+2.2 修改配置文件
+]# cp  /etc/maxscale.cnf /root/
+
+]# vim /etc/maxscale.cnf
+  9 [maxscale] 定义服务运行后线程的数量
+ 10 threads=auto
+
+ 18 [server1] 指定数据库服务器ip地址
+ 19 type=server
+ 20 address=192.168.4.51  master数据库服务器
+ 21 port=3306
+ 22 protocol=MySQLBackend
+ 23 
+ 24 [server2] 指定数据库服务器ip地址
+ 25 type=server
+ 26 address=192.168.4.52  slave数据库服务器
+ 27 port=3306
+ 28 protocol=MySQLBackend
+休息15分钟到11：15
+
+ 36 [MySQL Monitor] 定义监视的数据库服务器
+ 37 type=monitor
+ 38 module=mysqlmon
+ 39 servers=server1, server2  数据库服务器主机名
+ 40 user=scalemon             用户
+ 41 passwd=123qqq...A         密码
+ 42 monitor_interval=10000
+
+ 53 #[Read-Only Service]
+ 54 #type=service
+ 55 #router=readconnroute
+ 56 #servers=server1
+ 57 #user=myuser
+ 58 #passwd=mypwd
+ 59 #router_options=slave
+
+ 64 [Read-Write Service] 定义读写分离服务
+ 65 type=service
+ 66 router=readwritesplit
+ 67 servers=server1, server2  指定数据库服务器
+ 68 user=pljadmin             用户
+ 69 passwd=123qqq...A         密码
+ 70 max_slave_connections=100%
+
+ 76 [MaxAdmin Service]  管理服务
+ 77 type=service
+ 78 router=cli
+
+ 86 #[Read-Only Listener]
+ 87 #type=listener
+ 88 #service=Read-Only Service
+ 89 #protocol=MySQLClient
+ 90 #port=4008
+
+ 92 [Read-Write Listener] 定义数据读写分离服务使用的端口号
+ 93 type=listener
+ 94 service=Read-Write Service
+ 95 protocol=MySQLClient
+ 96 port=4006
+
+ 98 [MaxAdmin Listener] 定义管理服务使用的端口号
+ 99 type=listener
+100 service=MaxAdmin Service
+101 protocol=maxscaled
+102 socket=default
+103 port=4026
+
+2.3 在主机51 52 根据配置文件的设置添加对应的用户
+mysql>
+grant replication slave, replication client on *.* 
+to scalemon@"%"  identified by  "123qqq...A"; 
+
+mysql>
+grant select on mysql.* to pljadmin@"%" 
+identified by  "123qqq...A";
+
+mysql> select user,host from mysql.user 
+where  user in ("scalemon","pljadmin");
+
+
+10分钟  到 14：17
+
+2.4 启动数据读写分离服务  10分钟  到 14：33
+[root@mycat57 ~]# maxscale  -f /etc/maxscale.cnf
+
+[root@mycat57 ~]# netstat -utnlp  | grep maxscale
+
+tcp6       0      0 :::4026                 :::*                    LISTEN      30865/maxscale      
+
+tcp6       0      0 :::4006                 :::*                    LISTEN      30865/maxscale      
+ 
+
+]#killall  -9  maxscale 停止服务的命令
+
+如果有3306端口话  要把对应的数据库服务停止
+[root@mycat57 ~]# netstat -utnlp  | grep  :3306
+
+
+
+
+3 测试数据读写分离服务的配置
+3.1 在57本机访问管理服务查看监控信息
+[root@mycat57 ~]# maxadmin  -uadmin  -pmariadb -P4026
+MaxScale> list servers
+MaxScale> exit
+
+
+
+3.2客户端主机50 连接57 对数据做访问，测试能否实现读写分离
+#]mysql  -h192.168.4.57 -P4006  -uyaya100  -p123qqq...A
+mysql>
+
+
+16:00 讲新课
++++++++++++++++++++++++++++++++++++++++++++++++
+安装支持多实例服务的软件包
+]# rpm -q gcc gcc-c++
+]# yum -y   install  gcc gcc-c++
+]# tar -zxvf mysql-5.7.20-linux-glibc2.12-x86_64.tar.gz 
+]#mv mysql-5.7.20-linux-glibc2.12-x86_64 /usr/local/mysql
+]#cd /usr/local/
+]#ls
+]#ls mysql/
+
+]# mv /etc/my.cnf /root/
+]# vim /etc/my.cnf
+[mysqld_multi]
+mysqld = /usr/local/mysql/bin/mysqld_safe
+mysqladmin = /usr/local/mysql/bin/mysqladmin
+user = root
+
+[mysqld1]
+datadir=/data3307
+port=3307
+log-error=/data3307/mysqld3307.log
+pid-file=/data3307/mysql3307.pid
+socket=/data3307/mysql3307.socket
+
+[mysqld2]
+datadir=/data3308
+port=3308
+log-error=/data3308/mysqld3308.log
+pid-file=/data3308/mysql3308.pid
+socket=/data3308/mysql3308.socket
+:wq
+
+]#  mkdir /data3307 ; mkdir /data3308
+
+休息 10分钟  到 17：33 
+启动编号为1 的数据库服务
+]# /usr/local/mysql/bin/mysqld_multi  start  1
+
+使用初始密码登陆
+]# /usr/local/mysql/bin/mysql -uroot 
+-p'h7rF93rrCc%T' -S /data3307/mysql3307.socket
+
+修改连接密码
+mysql> alter user  root@"localhost" identified by "123456";
+mysql> quit;
+
+使用修改后的密码登陆
+]# /usr/local/mysql/bin/mysql -uroot 
+-p123456 -S /data3307/mysql3307.socket
+mysql> show databases;
+create database db1;create table db1.a(id int);
+insert into db1.a values(666);select  * from db1.a;
+mysql>quit;
+ 
+停止编号为1的数据库服务
+]# /usr/local/mysql/bin/mysqld_multi --user=root --password=123456  stop 1
+
+
+启动编号为2的数据库服务
+]#/usr/local/mysql/bin/mysqld_multi start 2
+]#ls /data3308
+]#netstat  -utnlp  | grep  :3308
+
+]#/usr/local/mysql/bin/mysql -uroot -p'sdL)A&u)s1td' 
+-S /data3308/mysql3308.socket
+mysql> alter user root@"localhost" identified by "123456";
+
+
+]# /usr/local/mysql/bin/mysql -uroot -p123456 
+-S /data3308/mysql3308.socket
+mysql> show databases;

@@ -1,0 +1,540 @@
+################################################
+教学环境     ftp://172.40.50.114
+ 
+虚拟机A：
+ 1.   永久IP地址设置：192.168.4.10/24
+ 2.   设置永久主机名：svr10.tedu.cn
+ 3.   搭建本地的Yum仓库
+
+虚拟机B：
+ 1.   永久IP地址设置：192.168.4.20/24
+ 2.   设置永久主机名：pc20.tedu.cn
+ 3.   搭建本地的Yum仓库
+
+##################################################
+Shell脚本
+
+    脚本： 可以执行文本文件，可实现某种功能
+
+   Shell 解释器全称
+   bash 解释器一种
+
+##################################################
+规范的脚本的组成
+ 1. #!/bin/bash
+ 2.  #注释文字
+ 3.  可执行的代码
+  
+案例1：书写一个输出hello world 脚本
+
+ [root@svr10 ~]# vim /root/hello.sh
+  #!/bin/bash
+  echo hello world
+ [root@svr10 ~]# chmod +x /root/hello.sh
+ [root@svr10 ~]# /root/hello.sh
+  hello world
+ [root@svr10 ~]# 
+
+脚本执行方式
+   1.加执行权限，以绝对路径方式运行
+   2.加执行权限，以相对路径方式运行
+  3. PATH路径方式:提供命令的搜寻路径
+   
+采用无需执行权限的方式
+   1.  sh
+   2.  bash
+   3.  source   #不产生子进程,当前立即生效
+      4.    . 
+[root@svr10 /]# echo $PATH   #查看变量的值
+
+[root@svr10 /]# cp /root/hello.sh  /usr/bin/
+[root@svr10 /]# hello.sh 
+hello world
+[root@svr10 /]# cd /opt/
+[root@svr10 opt]# hello.sh 
+hello world
+[root@svr10 opt]# which hello.sh  #查询命令对应的执行程序位置
+
+[root@svr10 /]# ln -s /root/hello.sh  /usr/bin/
+[root@svr10 /]# ls /usr/bin/hello.sh 
+/usr/bin/hello.sh
+[root@svr10 /]# ls -l /usr/bin/hello.sh
+lrwxrwxrwx. 1 root root 14 6月  10 10:26 /usr/bin/hello.sh -> /root/hello.sh
+[root@svr10 /]# hello.sh 
+hello world
+[root@svr10 /]#
+
+[root@svr10 /]# cat /etc/redhat-release 
+Red Hat Enterprise Linux Server release 7.4 (Maipo)
+
+[root@svr10 /]# ln -s /etc/redhat-release  /abc  #快捷方式
+[root@svr10 /]# ls /abc
+/abc
+
+[root@svr10 /]# cat /abc 
+Red Hat Enterprise Linux Server release 7.4 (Maipo)
+[root@svr10 /]# ls -l /abc
+
+##################################################
+脚本的技巧
+  
+  管道：将前面命令的输出，交由后面命令处理
+
+[root@svr10 /]# ifconfig  | head -2
+
+  重定向：
+    > :  正确信息重定向
+    2>: 错误信息重定向
+    &>:正确与错误信息重定向
+
+[root@svr10 /]# ls /etc/passwd haha
+
+[root@svr10 /]# ls /etc/passwd haha > /opt/1.txt
+
+[root@svr10 /]# cat /opt/1.txt 
+[root@svr10 /]# ls /etc/passwd haha 2> /opt/1.txt
+[root@svr10 /]# cat /opt/1.txt
+
+[root@svr10 /]# ls /etc/passwd haha &> /opt/1.txt
+[root@svr10 /]# cat /opt/1.txt
+
+[root@svr10 /]# ls /etc/passwd haha > /opt/1.txt 2> /opt/2.txt
+
+[root@svr10 /]# cat /opt/1.txt 
+[root@svr10 /]# cat /opt/2.txt 
+
+
+[root@svr10 /]# ls /etc/passwd haha >> /opt/1.txt 2>> /opt/2.txt
+[root@svr10 /]# cat /opt/1.txt 
+[root@svr10 /]# cat /opt/2.txt
+
+
+#######################################################
+  '  ':取消Shell中特殊字符的意义，原样输出
+
+ $( )与反撇号 ` `：将命令的输出结果作为参数
+
+[root@svr10 opt]# cd /opt
+[root@svr10 opt]# rm -rf /opt/*
+
+[root@svr10 opt]# mkdir nsd-$(date +%F)
+[root@svr10 opt]# ls
+
+[root@svr10 opt]# mkdir test-`date +%F`
+[root@svr10 opt]# ls
+
+###################################################
+
+案例2：书写创建用户的脚本，并且设置密码
+
+ 黑洞设备:/dev/null
+
+
+
+ 为了增加脚本灵活度，适应多变环境。所以用变量
+
+ 变量:会变化的量    相当于一个容器，存放可以变化的值
+        以不变的名称，存放可以变化的值，方便重复使用一个值
+
+[root@svr10 /]# vim /root/user.sh
+ #!/bin/bash
+ a=natasha
+ useradd $a &> /dev/null
+ echo 用户$a创建成功
+ echo 123 | passwd --stdin $a &> /dev/null
+ echo 用户$a密码设置成功
+
+[root@svr10 /]# 
+
+
+  交互式：可以传递命令行参数，为脚本中变量赋值
+
+   read  :记录用户在键盘上的输入，为脚本中变量赋值
+     -p '' :屏幕提示信息
+  
+[root@svr10 /]# vim  /root/user.sh
+ #!/bin/bash
+ read -p  '请输入您要创建的用户:'   a
+ useradd $a &> /dev/null
+ echo 用户$a创建成功
+ echo 123 | passwd --stdin $a &> /dev/null
+ echo 用户$a密码设置成功
+
+###################################################
+• 设置变量时的注意事项
+– 若指定的变量名已存在,相当于为此变量重新赋值
+– 等号两边不要有空格
+– 变量名只能由字母/数字/下划线组成,区分大小写
+– 变量名不能以数字开头,不要使用关键字和特殊字符
+
+
+使用变量
+
+     $变量名     ${变量名}
+
+[root@svr10 /]# a=rhel
+[root@svr10 /]# echo $a
+rhel
+[root@svr10 /]# echo ${a}
+rhel
+[root@svr10 /]# echo $a7
+
+[root@svr10 /]# echo ${a}7
+rhel7
+[root@svr10 /]# 
+
+
+###################################################
+ 自定义变量：用户定义完成
+
+ 系统环境变量、位置变量、预定义变量：由系统定义完成
+
+ 系统环境变量：  PATH=命令的搜寻路径    USER=当前系统登陆的用户名
+
+[root@svr10 /]# echo $USER
+root
+[root@svr10 /]# su - stu01
+[stu01@svr10 ~]$ echo $USER
+stu01
+[stu01@svr10 ~]$ exit
+登出
+[root@svr10 /]# 
+
+ 位置变量： $1  $2  $3  ...... 
+        可以传递命令行参数，为脚本中变量赋值(非交互)
+
+       $0:存放执行的脚本名
+
+[root@svr10 /]# vim /root/1.sh
+ #!/bin/bash
+ echo $1
+ echo $2
+ echo $3
+[root@svr10 /]# /root/1.sh  tt  aa  bb 
+
+[root@svr10 /]# vim /root/cat.sh
+ #!/bin/bash
+  cat -n $1  | head -$2
+
+[root@svr10 /]# /root/cat.sh /etc/passwd  3
+
+
+预定义变量：  
+               $# : 统计位置变量的个数,判断用户是否输入参数
+               $*：所有位置变量的值
+               $? : 程序或命令运行返回值(状态值)，0正常       非0不正常
+
+#####################################################
+
+测试操作
+
+       [  测试表达式  ]
+
+
+• 检查文件状态
+	-e:文档存在为真
+	-d:存在且为目录为真
+	-f:存在且为文件为真
+	-r:存在且有读取权限为真
+	-w:存在且有写入权限为真
+	-x:存在且有执行权限为真
+
+• 比较整数大小
+	-gt:大于
+	-ge:大于等于
+	-eq:等于
+	-ne:不等于
+	-lt:小于
+	-le:小于等于
+
+• 字符串比对
+    ==: 字符串相等为真
+    !=：字符串不相等为真
+
+[root@svr10 ~]# [  student == root ]
+[root@svr10 ~]# echo $?
+1
+[root@svr10 ~]# [  student != root ]
+[root@svr10 ~]# echo $?
+0
+[root@svr10 ~]# [  $USER == root ]
+[root@svr10 ~]# echo $?
+0
+[root@svr10 ~]# 
+
+  -z :判断变量值 为空 为真
+  -n :判断变量值 有值 为真
+
+
+
+ 逻辑连接： 
+   A && B  : A必须运行成功，在运行B
+
+   A ； B  : A运行，在运行B
+      
+   A || B  : A必须运行失败，在运行B
+
+
+[root@svr10 ~]# [ -e /etc/passwd ] && echo Yes || echo NO
+Yes
+[root@svr10 ~]# [ -e /etc/haha ] && echo Yes || echo NO
+NO
+[root@svr10 ~]# 
+#####################################################
+if判断
+
+if双分支处理
+
+	if  [条件测试 ];then
+	  命令序列xx
+	else
+	  命令序列yy
+	fi
+
+案例3：
+    
+     判断用户输入用户名，该用户是否存在，
+     如果用户是存在，则输出用户已存在
+     如果用户不存在，则创建该用户，输出用户创建成功
+
+[root@svr10 ~]# vim /root/test.sh 
+	#!/bin/bash
+	read  -p   '请输入您要测试的用户名:'     user
+	id $user  2>  /dev/null
+	if [  $?  -eq  0  ];then
+	  echo  用户已存在
+	else
+	  useradd  $user
+	  echo  用户创建成功
+	fi
+
+####################################################
+
+案例4：猜数的脚本
+
+    计算机随机产生一个0到9之间的数字
+    用户输入一个0到9之间的数字
+
+    如果  计算机随机产生数字 与 用户输入数字  相等，则输出 恭喜您猜对了
+    如果  计算机随机产生数字 与 用户输入数字  不相等，则输出 您猜错了
+
+ 系统环境变量： RANDOM=随机数字
+  
+  取余数运算（求模）：余数一定小于除数
+
+   $[$RANDOM%10] :产生10以内的随机数字
+
+[root@svr10 ~]# vim  /root/num.sh 
+  #!/bin/bash
+  num1=$[$RANDOM%10]
+  read  -p    '请输入一个0到9之间的数字:'       num2
+
+  if  [  $num1   -eq  $num2   ];then
+      echo 恭喜您猜对了
+  else
+      echo 您猜错了 
+      echo 正确的数字为$num1
+  fi
+
+################################################
+
+if多分支处理
+
+	if [条件测试1] ; then
+	   命令序列xx
+
+	elif [条件测试2] ; then
+	  命令序列yy
+
+	elif [条件测试3] ; then
+	  命令序列aa
+
+	else
+	   命令序列zz
+	fi
+
+案例5：  
+         用户输入成绩：
+          如果成绩大于等于90，则输出优秀
+
+          如果成绩大于等于70，则输出良好
+
+          如果成绩大于等于60，则输出合格
+
+          以上条件均不满足，则输出  仍需努力
+
+[root@svr10 ~]# vim  /root/if03.sh
+	#!/bin/bash
+	read -p  '请输入您的成绩:'    num
+
+	if  [   $num  -ge  90  ];then
+	    echo 优秀
+	elif [  $num  -ge  70  ];then
+	    echo 良好
+	elif [  $num  -ge  60  ];then 
+	    echo 合格
+	else
+ 	   echo 仍需努力
+	fi
+
+
+
+案例6：猜数的脚本
+
+    计算机随机产生一个0到9之间的数字
+    用户输入一个0到9之间的数字
+
+    如果  计算机随机产生数字 与 用户输入数字  相等，则输出 恭喜您猜对了
+
+    如果 用户输入数字 比 计算机随机产生数字  大 ，则输出 您猜大了
+    如果 用户输入数字 比 计算机随机产生数字  小 ，则输出 您猜小了 
+
+[root@svr10 ~]# vim  /root/num.sh 
+  #!/bin/bash
+  num1=$[$RANDOM%10]
+
+  read  -p    '请输入一个0到9之间的数字:'       num2
+
+  if  [  $num1   -eq  $num2   ];then
+      echo  恭喜您猜对了
+  elif  [  $num2  -gt  $num1  ];then
+      echo  您猜大了
+  else
+      echo  您猜小了 
+  fi
+
+
+案例7：猜数的脚本
+
+    在案例6的基础上，可以允许用户猜三次机会
+[root@svr10 ~]# vim /root/num.sh
+	#!/bin/bash
+	num1=$[$RANDOM%10]
+	for i  in {1..3}
+	do
+	read  -p   '请输入一个0到9之间的数字:'    num2
+	if  [  $num1   -eq  $num2   ];then
+	      echo  恭喜您猜对了
+	      exit                               #退出整个脚本
+	elif  [ $num2 -gt $num1 ];then
+	      echo  您猜大了
+	else
+	      echo  您猜小了 
+	fi
+	done
+
+
+
+
+##################################################
+循环：可以反复重复执行一个操作
+
+
+ for 变量名 in 值列表
+ do
+   命令序列
+ done
+
+
+[root@svr10 ~]# cat /root/for01.sh
+#!/bin/bash
+
+for  i  in  zhangsan  lisi  wangwu   dc  tc
+do
+   useradd $i &> /dev/null
+   echo $i成功
+done 
+
+
+  循环的变量值，可以不参与循环体
+
+[root@svr10 ~]# vim /root/for02.sh
+#!/bin/bash
+for  i  in  1 2 3 4 5
+do 
+  echo  hello
+done
+
+################################################
+造数工具：{ 起始 .. 结束 }
+
+[root@svr10 ~]# vim /root/for02.sh
+#!/bin/bash
+for  i  in  {1..100}
+do 
+  echo  hello$i
+done
+
+
+##################################################
+运算
+[root@svr10 /]# expr 2 \* 3     #乘法需要转义，取消通配符号含义
+
+[root@svr10 /]# expr 1  + 2  
+
+[root@svr10 /]# expr 3  - 2 
+ 
+[root@svr10 /]# expr 10  / 2  
+
+
+  $[] 
+[root@svr10 /]# echo $[1+1]
+[root@svr10 /]# echo $[2*3]
+
+
+ let  :变量值的自增或自减
+[root@svr10 /]# i=1
+[root@svr10 /]# let i++
+[root@svr10 /]# echo $i
+2
+[root@svr10 /]# let i++
+[root@svr10 /]# echo $i
+3
+[root@svr10 /]# let i++
+[root@svr10 /]# echo $i
+4
+[root@svr10 /]# let i+=2
+[root@svr10 /]# echo $i
+6
+[root@svr10 /]# let i+=2
+[root@svr10 /]# echo $i
+8
+[root@svr10 /]# let i+=3
+[root@svr10 /]# echo $i
+
+
+ bc :计算器，支持小数
+
+[root@svr10 /]# echo "scale=3;10/3" | bc
+3.333
+
+[root@svr10 /]# echo "1.2+1.3" | bc
+2.5
+[root@svr10 /]#
+
+
+####################################################
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

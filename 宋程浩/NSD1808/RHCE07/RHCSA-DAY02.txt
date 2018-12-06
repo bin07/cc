@@ -1,0 +1,443 @@
+5什么是计划任务：
+   按照计划的时间（时刻、周期）执行指定的任务
+at 
+crontab
+
+
+
+系统服务：crond
+配置文件：
+    /etc/crontab
+    /var/spool/cron/用户名
+#systemctl  status  crond
+#systemctl  enable  crond  【如果没有提示，说明之前已经做完】
+
+配置记录格式：
+执行的时间点         执行的命令
+分  时  日  月  周    任务操作命令（用绝对路径、必要时可记录输出）
+
+时刻表示方式：
+时刻表示方式：
+*、5-10、5,7,9、*/3、1-15/3
+*：匹配范围内任意时间
+，：分隔多个不连续的时间点
+-：指定连续时间范围
+/n：值时间频率，每n......
+
+配置工具：
+crontab  -e  [-u  用户名]
+crontab  -l   [-u  用户名]
+crontab  -r   [-u  用户名]
+
+设置系统日期、时间：
+date  -s  'HH:MM'
+date  -s  'HH:MM:SS'
+date  -s  'yyyy-mm-dd'
+date  -s  'yyyy-mm-dd HH:MM'
+
+根据BIOS时间设置系统时间：
+    hwclock  -s
+根据系统时间设置BIOS时间：
+    hwclock  -w
+
+检查计划任务的执行情况：
+tail  -5  /var/log/cron
+
+
+7. 升级内核
+系统引导相关知识 ——
+GRUB2引导器，支持多操作系统、多版本内核
+内核文件：/boot/vmlinuz-*
+查看内核版本  ：uname -r
+rpm软件包管理 ——
+RPM，Redhat（RPM） Package Manager
+.rpm
+
+
+rpm  -e  软件名  .. ..   
+rpm -q  软件名  .. ..
+rpm -ql  软件名  .. ..
+
+
+旧版本：3.10.0-123.el7.x86_64
+新版本：3.10.0-123.1.2.el7.x86_64
+
+1）考试的时候，内核版本会给你一个网址。从firefox访问给定的URL网址，找到kernel-版本号、kernel-doc-版本号，我们需要的是kernel-版本号这个包。
+2）下载内核文件
+wget  http://
+3）rpm -ivh kernel*.rpm
+4）reboot;uname -
+
+三 文档管理
+13.查找文件（find）
+常见的条件：
+   -type  类型（f、d、l、b）
+   -name  "名称"   （可以使用通配符）
+匹配任意内容 * 
+匹配任意一个字符 ?
+匹配任意一个中括号的内的字符 []
+   -size  +|-文件大小  （K、M、G） 命令中的“＋”是表示要求系统只列出大于指定大小的文件，而使用“-”则表示要求系统列出小于指定大小的文件
+   -mtime  +|-天数 （查找在指定时间曾被更修改的文件或目录，单位以24小时计算）
+-指定天数以内修改的文件
+ 指点天数当天修改的文件
++指定天数前修改的文件
+   -user  用户名
+   -group  组名
+
+
+
+条件的组合：
+条件1  [-a]  条件2 ... 		【and】
+条件1  -o  条件2 ... 		【or】
+
+find查找结果的处理：
+find  ...  -exec  处理的命令 {代表每一个结果}  \；
+
+cp 被拷备的文件  /root/findfiles
+cp $(查找命令)  /root/findfiles
+cp $(find / -type f -user student) /root/findfiles
+
+
+grep 匹配模式  文本文件
+命令行  | grep [选项] 匹配模式
+
+14.匹配模式的表示：
+word 	—— word
+^word 	—— 以word开头
+word$ 	—— 以word结尾
+^$	—— 空行
+
+常见的选项：
+-v  取反条件
+-i  忽略大小写
+-E  支持正则表达式
+
+重定向输出：
+命令行  >  文件
+命令行  >>  文件
+
+Linux系统的文档备份/恢复 ——
+归档：把很多文件归纳到一起 	tar
+压缩：减小文件占用空间的大小 	gzip、bzip2、xz	
+tar   选项  压缩包的名字 被压缩的文件
+tar命令的选项：
+   -c：创建新文档
+   -x：释放备份文档
+   -f：指定文档名称
+   -z：处理 .gz 格式
+   -j：处理 .bz2 格式
+   -J：处理 .xz 格式
+   -t：显示文档列表
+   -p：保持原有权限
+   -P：保持绝对路径
+   -C：指定释放备份文件时的目标位置
+   --exclude=排除的子目录
+
+#tar -cf  file.tar   /etc/passwd   /etc/fstab
+#tar -xf  tail.tar  -C /mnt/
+
+tar 制作备份文件：
+   tar  -zcf  备份文件名.tar.gz  被备份的文档....
+   tar  -jcf  备份文件名.tar.bz2  被备份的文档....
+   tar  -Jcf  备份文件名.tar.xz  被备份的文档....
+
+# tar -zcf /opt/test01.tar.gz /etc/passwd /boot/
+# tar -jcf /opt/test02.tar.bz2 /etc/passwd /boot/
+# tar -Jcf /opt/test03.tar.xz /etc/passwd /boot/
+
+tar 从备份文件恢复：
+   tar  -xf  备份文件名   [-C  目标文件夹]
+
+tar 查看备份文件内容：
+   tar  -tf  备份文件名
+
+
+
+
+四 配置应用客户端
+8.LDAP，轻量级目录访问协议
+由服务器集中存储并向客户端提供的信息
+提供的信息包括：用户名、密码、通讯录、主机名映射记录等记录
+
+用户账号的类型 ——
+本地账号：用户名/密码等信息存放在本机   /etc/passwd  /etc/shadow
+网络账号：用户名/密码等信息存放在其他的服务器上
+服务端提供：
+-LDAP服务器地址、基本DN名称
+-加密用的证书（若需要）
+客户端准备
+-修改用户登录的验证方式，启用LDAP
+-正确配置LDAP服务端参数
+-软件包：sssd（与LDAP服务器联系的软件） 
+                authconfig-gtk（配置sssd的图形软件）
+
+# yum -y install sssd authconfig-gtk
+#rpm -q sssd 
+#rpm -q   authconfig-gtk
+
+LDAP服务器地址：ldaps://服务器地址
+LDAP域的基本DN：dc=example,dc=com
+    ldap server：ldapuser0
+    host1  host2  host 3  server0 ....
+
+软件包（C）：sssd、krb5-workstation、authconfig-gtk
+系统服务（C）：sssd
+
+配置工具：
+authconfig-tui 【默认有】
+authconfig-gtk
+
+验证：
+# systemctl restart sssd
+# systemctl enable sssd
+# id ldapuser0
+uid=1700(ldapuser0) gid=1700(ldapuser0) 组=1700(ldapuser0)
+# grep 'ldapuser0' /etc/passwd
+
+#su - ldapuser0
+
+8.客户机如何访问NFS共享——
+如何访问NFS共享 ——
+用途：提供共享文件夹
+列出有那些资源：
+   showmount  -e  服务器地址
+挂载NFS共享资源：
+   mount  服务器地址:共享目录路径  本机挂载点
+
+
+autofs自动挂载（触发挂载、按需挂载） ——
+    创建挂载点、挂载设备、卸载设备
+
+软件包：autofs
+系统服务：autofs
+配置文件（当访问哪个目录时，自动挂载哪个设备）：
+# vim  /etc/auto.master  	【监控点配置】
+父目录的路径   策略文件的路径
+/home/guests   /etc/auto.abc
+
+# vim  /etc/auto.abc 	【策略文件】
+挂载点子目录名    -挂载参数    设备路径
+ldapuser0         -rw       classroom:/home/guests/ldapuser0
+
+10
+Network Time Protocol
+  -NTP服务器为客户机提供标准时间
+  -NTP客户机需要与NTP服务器保持沟通
+用途：提供标准时间
+软件包（C）：chrony
+配置文件（C）：/etc/chrony.conf
+系统服务（C）：chronyd
+
+date  -s  'yyyy-mm-dd  HH:MM:SS'
+date  -s  'yyyy-mm-dd'
+date  -s  'HH:MM:SS'
+
+虚拟机server：
+
+1.安装软件包:chrony
+2.修改配置文件/etc/chrony.conf
+ server 172.25.254.254 iburst
+
+3.重起服务
+ # systemctl restart  chronyd  #重起服务
+ # systemctl enable  chronyd   #设置服务随机自起动
+
+####################################################
+测试校时服务
+? 配置错误时间、起校时服务、检查时间
+– date -s 'yyyy-mm-dd HH:MM:SS'
+
+[root@server0 ~]# date -s '2008-10-1'   #修改系统时间
+2008年 10月 01日 星期三 00:00:00 CST
+
+[root@server0 ~]# date
+[root@server0 ~]# systemctl restart  chronyd
+
+[root@server0 ~]# date
+[root@server0 ~]# date
+[root@server0 ~]# timedatectl   #查看时间同步状态的指令
+......
+    NTP enabled: yes
+    NTP synchronized: yes
+......
+[root@server0 ~]# timedatectl set-ntp yes  #必要时修正
+
+五 磁盘分区及存储
+分区比较常见的一个命令就是fdisk，
+
+
+硬盘 --> 分区 --> 格式化 --> 挂载 --> 存储/读取文件
+硬盘 --> 分区 --> LVM逻辑卷 --> 格式化 --> 挂载 --> 存储/读取文件
+
+fdisk分区操作 ——
+fdisk  -l  硬盘设备
+fdisk  硬盘设备
+常用指令：m、p、n、q、w、d
+
+ MBR/msdos 分区模式
+– 1~4个主分区,或者 0~3个主分区+1个扩展分区(n
+个逻辑分区)
+– 最大支持容量为 2.2TB 的磁盘
+– 扩展分区不能格式化
+
+刷新分区表：【当硬盘的分区表被更改以后，需要将分区表的变化及时通知Linux内核，最好再reboot一下，否则在访问分区的时候，可能会找不到准确的设备】
+partprobe  /dev/vdb
+或 reboot
+
+格式化：
+mkfs.ext3  分区设备路径
+mkfs.ext4  分区设备路径
+mkfs.xfs  分区设备路径
+mkfs.<tab><tab>
+
+
+文件系统的挂载方式 ——
+手动挂载： mount   设备路径   挂载点目录
+开机自动挂载：修改 /etc/fstab 配置文件
+         设备路径   挂载点目录  文件系统类型  defaults,_netdev  0 0
+触发挂载（按需自动挂载）：autofs服务
+
+mount挂载操作 ——
+mount   设备路径   挂载点目录 ——
+mount挂载（本地）：
+mount   /dev/cdrom  /mnt/dvd
+mount   /dev/sda1  /mnt/tdir
+mount挂载（NFS）：
+mount    服务器地址:共享文件夹路径   /mnt/tdir
+
+df  -Th
+
+
+
+
+考试环境：
+    只有一块磁盘 /dev/vda （包括系统分区，有剩余空间）
+     /dev/vda1 ==> /boot
+     /dev/vda2 ==> systemvg(/分区 vo逻辑卷200M)
+     剩余空间
+练习环境：
+    有两块磁盘 /dev/vda （包括系统分区，无剩余空间）
+    /dev/vdb （空磁盘）
+
+在磁盘 /dev/vdb 上按以下要求建立分区:
+1)采用默认的 msdos 分区模式
+2)第1个分区 /dev/vdb1 的大小为 200M
+3)第2个分区 /dev/vdb2 的大小为 2000M
+4)第3个分区 /dev/vdb3 的大小为 1000M
+
+# fdisk  /dev/vdb
+                 
+   n 创建新的分区----->p(回车)----->1(回车) ---->回车----->+200M
+   p 查看分区表
+   d 删除分区
+   w 保存并退出
+
+# ls  /dev/vdb[1-3]
+
+那刚才分这三个区，也是为了更接近我们的考试环境。
+
+500MiB —— 扩展逻辑卷
+1000MiB —— 新卷组和逻辑卷
+512MiB —— 交换分区
+
+# fdisk  -l  /dev/vda
+。。 。。
+磁盘标签类型：dos				【gpt】
+
+# fdisk  /dev/vda 			【gdisk】
+: p
+: n ==> e，分区编号默认，起始位置默认，结束位置默认
+: n ==> 类型l，编号默认，起始位置默认，结束位置+500M
+: n ==> 类型l，编号默认，起始位置默认，结束位置+1000M
+: n ==> 类型l，编号默认，起始位置默认，结束位置+512M
+: p
+: w
+# partprobe  /dev/vda
+# reboot
+
+
+
+第二题是让我们扩展一个逻辑卷，那你得有一个逻辑卷。
+LVM逻辑卷管理：
+用途 零散的空间存储【物理卷】（可以是磁盘，也可以是分区）整合成一个逻辑磁盘，根据需要分配逻辑上的分区空间。
+
+
+
+PV
+
+VG
+vgcreate  vgdisplay  vgsacn vgremove  vgextend
+vgcreate  卷组名  空闲存储设备的路径
+
+LV
+lvscan、lvcreate、lvdisplay、lvremove、lvextend
+lvcreate -L 大小 -n 逻辑卷名称 卷组名称
+
+
+
+15.添加逻辑卷
+PE：分配逻辑卷空间的时候，最小的单位
+
+创建卷组：
+   vgcreate  [-s  PE大小]  卷组名  分区.. ..
+创建逻辑卷：
+   lvcreate  -L  大小  -n  名称   卷组名
+   lvcreate  -l  PE个数  -n  名称   卷组名
+扩展逻辑卷：
+   lvextend  -L  +大小  /dev/卷组名/逻辑卷名
+   resize2fs  /dev/卷组名/逻辑卷名
+		【!! vgextend、xfs_growfs】
+
+
+>800MIB
+创建卷组：vgcreate  [ -s PE大小]   卷组名   空闲分区
+创建逻辑卷：lvcreate -L 大小 -n 逻辑卷名称 卷组名称
+创建逻辑卷的时候指定PE个数：
+lvcreate -l PE个数 -n 逻辑卷名称  卷组名称
+
+2.扩展逻辑卷
+500MiB(满足扩展的空间要求)
+使用lvscan命令，找到逻辑卷的大小，卷组名。
+#lvscan  | grep  XXX
+检查所在卷组的剩余空间，看是否满足扩展的需要
+#vgdisplay  XXX  | grep  Free
+当卷组的剩余空间不足时，需要先扩展组卷
+--否则扩展逻辑卷时会报错
+
+扩展卷组：
+vgextend  卷组名 空间分区...
+#vgdisplay  XXX | grep  Free
+当卷组的剩余空间充足时，可直接扩展逻辑卷
+-扩展逻辑卷
+lvextend  -L 新大小    /dev/卷组名/逻辑卷名
+
+对于格式化过的逻辑卷，扩容后应该通知Linux内核
+否则使用df -Th查看还是旧的大小
+刷新文件系统容量：
+resize2fs  EXT3/4设备
+xfs_growfs   XFS设备
+
+
+
+12.添加交换分区
+=512MiB
+
+交换分区：相当于虚拟内存，当物理内存不够时，使用磁盘空间来模拟内存，在一定程度上缓解内存不足的问题。
+
+将提供的分区按swap格式化交换分区：
+      mkswap   设备路径
+启用/停止控制：
+      swapon   设备路径
+      swapoff   设备路径
+查看交换分区使用情况：
+     swapon  -s
+     free
+启动fstab可用交换空间
+      swapon -a
+
+交换分区优先级
+*当有多个交换分区时，优先级无法控制。多个交换分区的默认优先级都是-1
+
+交换分区优先级为1~32767，数值越大优先级越高。
+使用swapon启用时，可添加  -p  优先级
+在/etc/fstab文件中，可添加参数 pri=优先级

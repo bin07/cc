@@ -1,0 +1,391 @@
+李佳宇
+
+
+日程安排介绍
+ DAY01～DAY02 RHCSA考点解析 [红帽系统管理员]
+ DAY03～DAY06 RHCE考点解析
+ DAY07 考试注意事项串讲 指导练习
+ DAY08 模拟考试
+
+上课时间安排
+ 09：30~12：00
+ 13：30~16：00
+ 16：00—           大家自由练习
+
+RHCE考前辅导群
+QQ ：303486093
+
+一.红帽考试及环境介绍
+1.RHCSA（红帽认证系统管理员）
+  全机试，时长150分钟
+  约16道题，满分300
+2.RHCE（红帽认证工程师）
+ 全机试，时常210分钟
+ 约22道题，满分300
+3.考试环境说明（X为考生编号）
+
+ ！！每名考生一台真实机，这台真机上提供虚拟机，答题全部在虚拟机中完成。
+ ！！桌面上会提供访问考试平台及虚拟机的快捷方式
+ ！！由考官服务器提供所需软件 DHCP/DNS/集中认证等必要的资源。
+ ！！真实机：foundation.domainX.example,com
+ ！！虚拟机RHCSA部分：station.domainX.example.com
+ ！！虚拟机-RHCE部分：system1.domainX.example.com                      system2.domainX.example.com
+
+二 练习环境说明
+1.每个人可使用3台虚拟机，
+！！虚拟机 classsroom，相当于考官服务器：classroom.example.com
+！！虚拟机server，相当于答题机1：server0.example.com
+！！虚拟机desktop，相当于答题机2，desktop.example.com
+2.快速重置练习环境，
+！！按顺序执行，根据提示输入y确认
+#rht-vmctl reset 虚拟机名【断电 还原】
+#rht-vmtl poweroff 虚拟机名【强制关闭】
+
+#rht-vmctl  reset classroom
+#rht-vmctl  reset  server
+#rht-vmctl  reset  desktop
+
+PDF版答题参考文档：
+试题概述：样题{非常接近真题}
+解题参考：针对练习环境
+
+RHCSA核心考点列表：
+
+一 开考准备
+1.重设虚拟机的root密码
+RECOVERY(恢复模式)
+linux16后添加
+rd.break  console=tty0 【ctrl+x进入Recovery模式】
+#mount -o rw,remount /sysroot
+#chroot /sysroot
+#echo 密码 |  passwd  --stdin root
+#touch /.autorelabel  //重置安全标签
+#exit
+#reboot
+
+
+Tab键 自动补全命令字、路径、服务名称、软件名称。
+7操作系统：systemctl   start|stop|status|restart    服务名称
+6操作系统：service  服务名  start|stop...
+
+7操作系统：systemctl   enable    服务名称
+                    systemctl  disable    服务名称
+                    【7.2系统   --now     7.0】
+6操作系统：chkconfig  服务名 off|on 
+
+
+
+2.为虚拟机配置网络
+
+#hostnamectl  set-hostname  主机名   【永久设置，下次开机不会丢失】
+【只输命令 可查看当前主机名的状态】
+——》 /etc/hostname
+
+网络管理
+nmtui
+nm-connection-editor
+
+*nmcli主要的用法（查看、删除/增加、修改、激活/禁用）
+
+网络连接：是由我们的管理员设定  connection
+网络设备：是由系统内核来识别 device
+
+#nmcli  connection show //查看连接信息
+#nmcli connection modify 修改网络参数
+#nmcli connection modify “System eth0”ipv4.method manual ipv4.address “IP地址/子网  网关【7.0】” ipv4.dns DNS地址   connection.autoconnect  yes
+# nmcli  connection "System eth0"  up   //启动连接
+
+扩展：
+在红帽7.2开始就不能用上面的方式。配置网关多了个参数 ipv4.gateway 默认网关
+
+nmcil命令的用法（删除/增加）
+#nmcli connection show
+#nmcli connection delete  "System eth0"
+#nmcli connection show
+#ifconfig -a
+#nmcli connection add  con-name "System eth0"  ifname eth0 type  ethernet
+#nmcli connection show
+#nmcli connection modify "System eth0"  ipv4.method manual  ipv4.addresses "172.25.0.11/24  172.25.0.254"  ipv4.dns 172.25.254.254 connection.autoconnect yes
+#nmcli connection up "System eth0"
+#vim /etc/sysconfig/network-scripts/ifcfg-System_eth0
+
+考试从真机访问虚拟机的方式：
+    ssh -X root@虚拟机地址   【-X 图形转发】
+
+
+二 系统管理任务
+1.添加YUM源
+YUM:集中为我们提供软件包。
+
+/etc/yum.conf [全局参数 ]
+/etc/yum.repos.d/*.repo  【自定义源的目录】
+
+辅助工具：
+yum-config-manager  --add-repo  软件源地址 【通过浏览器去验证，在浏览器中可以打开这个网址，看到正常的软件仓库的目录结构】
+
+【软件源（唯一）】
+name=软件源的描述
+baseurl=指定源去哪里找【软件源的地址】
+enabled=1（开启）|0（关闭）
+gpgcheck=0 禁止软件签名检测
+
+#yum repolist[获取仓库信息]
+#yum clean  all【查看软件包】
+
+
+
+#yum [-y  （确认安装）]  install  软件名
+#yum list 【列出软件包】
+#yum [-y  （确认安装）]  remove  软件名
+#yum [-y  （确认安装）]  reinstall 软件名
+
+
+3.添加用户/组账号
+11.配置组账户账号
+
+#vim /etc/passwd
+
+！登录名
+！密码
+！UID用户一个数字标识  root【0】 haha
+（root 0
+201-999 系统用户
+1001~60000）
+！GID 组帐号
+！家目录
+！登录shell(默认/bin/bash)
+用户账号的增删改查【/etc/passwd /etc/shadow】
+useradd  用户名 【用户用来登录系统的名称】
+	格式：useradd  [选项]...  用户名
+	** 用户名不要是纯数字，也不要以数字开头
+	** 将“登录Shell”设置为/sbin/nologin可以禁止用户登入
+常用命令选项
+  -u 指定UID
+  -g 指定 GID 其中我门用户必须有一个主组、且还可以有多个附加组
+  -G 指定附加组名
+  -d指定家目录
+  -s 指定登录shell 如我们创建完了 可以使用usermod进行修改
+
+
+passwd
+非交互去更改密码：echo haha  | passwd  --stdin  用户名
+
+usermod  已创建的用户
+ -u  指定UID
+ -g  指定主组
+ -G 指定附加组
+ -d  指定家目录
+ -s   指定登陆shell
+
+userdel -r  用户 【删除用户所有信息】
+
+【/etc/group  /etc/gshadow】
+组帐号的一些信息
+组名
+GID
+组成员
+
+groupadd  组名
+groupmod    -n   新组名   组名
+groupdel  组名
+
+id  用户名
+
+
+
+
+4.设置文件权限
+6.建共用目录（SGID）
+访问权限：
+
+基本权限
+
+– 读取(r):允许查看内容-read
+– 写入(w):允许修改内容-write
+– 可执行(x):允许运行和切换-excute
+
+#目录
+    ** 若对目录有r权限，表示可列出该目录内容
+    ** 若对目录有w权限，表示可在该目录下新建/删除/移动文件或子目录
+    ** 若对目录有x权限，表示允许cd到该目录下
+#文件
+    ** 若对文件有r权限，表示可查看文件的内容
+    ** 若对文件有w权限，表示可在新建/删除/移动文件内的内容
+    ** 若对文件有x权限，表示可以执行这个文件
+
+每个文件有个基本的属性
+文档的归属：
+– 所有者(u):拥有此文件/目录的用户-user
+– 所属组(g):拥有此文件/目录的组-group
+– 其他用户(o):除所有者、所属组以外的用户-other
+所有用户:以上三类归属合称-all
+
+
+更改访问权限：
+chmod  ugo+-=rwx   文档
+
+
+更改归属：
+chown    属主 文件.....
+         属主：属组  文件......
+             ：属组  文件......
+常用选项：-R 递归修改权限
+
+#cp /etc/passwd  a.txt
+#chmod u+x a.txt
+#chmod o-r a.txt
+#chmod u+x，o-r  a.txt
+#chmod ug=rwx a.txt
+
+权限位的八进制数表示：
+r=4 w=2 x=1
+rwx =7
+
+#chmod 770 a.txt
+#chmod 750 a.txt
+
+
+
+
+提出附加权限的概念：——实现一些特殊的访问
+
+
+#####################################################
+SUID权限作用：传递所有者身份
+Set UID概述
+– 占用属主(User)的 x 位
+– 显示为 s 或 S,取决于属主是否有 x 权限
+– 仅对可执行的程序有意义
+– 当其他用户执行带SUID标记的程序时,具有此程序属主的身份和相应权限
+
+
+[root@server0 ~]# which  mkdir
+/usr/bin/mkdir
+[root@server0 ~]# cp /usr/bin/mkdir  /bin/hahadir
+[root@server0 ~]# ls -l /bin/hahadir 
+-rwxr-xr-x. 1 root root 79712 4月  22 21:20 /bin/hahadir
+[root@server0 ~]# chmod u+s /bin/hahadir 
+[root@server0 ~]# ls -l /bin/hahadir 
+-rwsr-xr-x. 1 root root 79712 4月  22 21:20 /bin/hahadir
+[root@server0 ~]# useradd zhangsan 
+[root@server0 ~]# su - zhangsan
+[zhangsan@server0 ~]$ mkdir zhangsan01
+[zhangsan@server0 ~]$ hahadir zhangsan02
+[zhangsan@server0 ~]$ ls -l
+total 0
+drwxrwxr-x. 2 zhangsan zhangsan 6 Apr 22 21:21 zhangsan01
+drwxrwxr-x. 2 root     zhangsan 6 Apr 22 21:21 zhangsan02
+
+SUID权限作用：传递所有者身份
+###############################################
+SGID:
+  在设置SGID目录下，新建的所有文档，会继承父目录的所属组身份
+[root@server0 ~]# mkdir /student
+[root@server0 ~]# ls -ld /student/
+drwxr-xr-x. 2 root root 6 4月  22 21:17 /student/
+[root@server0 ~]# mkdir  /student/harry
+[root@server0 ~]# ls -ld /student/harry/
+drwxr-xr-x. 2 root root 6 4月  22 21:17 /student/harry/
+[root@server0 ~]# groupadd tarena
+[root@server0 ~]# chown  :tarena /student/
+[root@server0 ~]# mkdir /student/jack
+[root@server0 ~]# ls -ld /student/jack
+drwxr-xr-x. 2 root root 6 4月  22 21:18 /student/jack
+[root@server0 ~]# chmod  g+s /student/
+[root@server0 ~]# mkdir /student/kaka
+[root@server0 ~]# ls -ld /student/kaka
+drwxr-sr-x. 2 root tarena 6 4月  22 21:19 /student/kaka
+##############################################
+t权限应用
+
+– 适用于目录,用来限制用户滥用写入权
+– 在设置了粘滞位的文件夹下,即使用户有写入权限,
+也不能删除或改名其他用户文档
+
+[root@nsd /]# mkdir /public
+[root@nsd /]# chmod 777 /public
+[root@nsd /]# ls -ld /public
+drwxrwxrwx. 2 root root 4096 11月 29 15:31 /public
+[root@nsd /]# chmod o+t /public/
+[root@nsd /]# ls -ld /public
+
+################################################
+ACL权限的应用
+ 可以为个别用户、组设置独立的rwx权限
+
+?setfacl命令
+– 格式:setfacl [选项] u:用户名:权限 文件...
+	
+? 常用命令选项
+– -m:定义一条ACL策略
+– -x:清除指定的ACL策略
+– -b:清除所有已设置的ACL策略
+
+
+
+[root@nsd /]# mkdir /tiantan
+[root@nsd /]# ls -ld /tiantan
+[root@nsd /]# chmod 750 /tiantan
+[root@nsd /]# ls -ld /tiantan
+[root@nsd /]# useradd tc
+[root@nsd /]# su - tc
+[tc@nsd ~]$ cd /tiantan
+[tc@nsd ~]$ exit
+[root@nsd /]# setfacl -m u:tc:rx /tiantan
+[root@nsd /]# getfacl /tiantan
+[root@nsd /]# su - tc
+[tc@nsd ~]$ cd /tiantan
+[tc@nsd ~]$ exit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+5.配置计划任务
+7.升级内核
+
+三 文档管理
+13.查找文件（find）
+14.检索文本（grep）
+16 创建归档（tar）
+
+四 配置应用客户端
+8.设置LDAP客户端
+9.设置autofs出发挂载+NFS共享客户端
+10.设置NTP时间同步客户端
+
+五 磁盘分区及存储【风险较大，需小心，不小心把磁盘搞挂了】
+15.添加逻辑卷
+2.扩展逻辑就
+12.添加交换分区
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

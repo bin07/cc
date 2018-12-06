@@ -1,0 +1,761 @@
+####################################################
+一、还原环境
+[root@room9pc01 ~]# rht-vmctl reset classroom
+[root@room9pc01 ~]# rht-vmctl reset server
+[root@room9pc01 ~]# rht-vmctl reset desktop
+
+
+[root@room9pc01 ~]# ssh -X root@172.25.0.11
+
+
+
+
+
+
+
+
+#######################################################
+
+正则表达式 : 利用一堆符号,表示匹配的内容   用描述的语言,表达心中所想
+
+基本正则
+    
+    ^ : 匹配的开头
+    $ : 匹配的结尾
+    [ ] : 集合,匹配集合中,一个字符  
+   [a-z][A-Z]==[a-Z]
+      [0-9]
+     [^ ]:对集合取反  
+      .  : 任意单个字符
+     * : 前面字符出现任意次(包括0次)
+  \{n,m\} :  前面字符出现n到m次
+  \{n,\} :  前面字符出现n次以上
+  \{n\} :  前面字符出现n次
+
+
+
+
+[root@server0 ~]# grep 'o\{2\}'  /etc/passwd
+[root@server0 ~]# grep '[0-9]' /etc/hosts
+[root@server0 ~]# grep '[a-Z]' /etc/hosts
+[root@server0 ~]# grep '[^0-9]' /etc/hosts   #集合取反
+[root@server0 ~]# grep '^[0-9]' /etc/hosts   #以数字开头
+[root@server0 ~]# grep '^root' /etc/passwd
+[root@server0 ~]# grep 'bash$' /etc/passwd
+[root@server0 ~]# grep '^127' /etc/hosts
+
+[root@server0 ~]# grep '^#' /etc/login.defs
+[root@server0 ~]# grep -v '^#' /etc/login.defs
+
+ # grep -v '^#' /etc/login.defs  |  grep -v '^$'
+
+
+
+扩展正则: 简化了基本正则的格式,增加了新的元素
+      
+      ?: 前面字符出现了0到1次
+      +: 前面字符出现了1次以上
+       |: 或者
+   \b: 单词边界
+
+[root@server0 ~]# egrep  '127|172'  /etc/hosts
+
+  
+
+基本正则: 兼容性强,格式复杂
+
+扩展正则: 兼容性差,格式简单
+
+#########################################################
+
+sed 非交互式文本编辑器,流处理器(逐行处理)
+
+ sed  选项     '条件 动作'     文件
+
+ -i:直接修改文件内容
+ -r:支持扩展正则
+
+一、增加内容
+
+     i:行前插入
+     a:行后追加
+   正则:匹配位置   /正则表达式/
+
+[root@A /]# head -3 /etc/passwd > /opt/a.txt
+[root@A /]# cat /opt/a.txt
+
+[root@A /]# sed  '1 i hahaxixi' /opt/a.txt   #在第1行前面插入
+[root@A /]# sed  '3 a hahaxixi' /opt/a.txt   #在第3行后面追加
+
+[root@A /]# sed  '$i hahaxixi' /opt/a.txt   #在最后行前面插入
+[root@A /]# sed  '$a hahaxixi' /opt/a.txt   #在最后行后面追加
+
+[root@A /]# sed  'a zhangsan' /opt/a.txt   #在每一行后面追加
+
+[root@A /]# sed -r  '/^bin/a 阳光明媚' /opt/a.txt  #以bin开头的行,后面追加
+
+
+#################################################################
+二、查看内容
+ 选项  -n :去除默认输出内容
+
+    p:动作查看
+  
+   正则:匹配位置   /正则表达式/
+
+[root@A /]# sed -n  '3p'   /opt/a.txt 
+[root@A /]# sed -n  '4p'   /opt/a.txt 
+
+[root@A /]# sed -n '1,3p'  /opt/a.txt       #从第一行到第三行
+[root@A /]# sed -n '1p;3p'  /opt/a.txt      #第一行和第三行
+
+[root@A /]# sed -rn '/root/p' /opt/a.txt    #输出包含root行内容
+[root@A /]# sed -rn '/root/p' /etc/passwd   #输出包含root行内容
+
+#########################################################
+三、删除内容
+   d:动作删除
+
+[root@A /]# sed   '/sbin/d'   /opt/a.txt #删除带有sbin的行
+
+[root@A /]# sed   '1d'    /opt/a.txt     #删除第1行
+
+[root@A /]# sed   '2d'    /opt/a.txt     #删除第2行
+
+[root@A /]# sed   '1,2d'   /opt/a.txt    #删除第1行到第2行
+
+[root@A /]# sed   '1d;3d'   /opt/a.txt   #删除第1行 和 第3行
+
+
+
+#########################################################
+四、 修改内容
+
+     c:整行替换掉
+   s/旧/新/:行内容的部分替换
+
+[root@A /]# cat  /opt/a.txt
+[root@A /]# sed  '1c 阳光明媚'  /opt/a.txt
+
+[root@A /]# sed   '1 s/root/admin/g'  /opt/a.txt
+
+[root@A /]# sed  -r  '/root/ s/root/admin/2'  /opt/a.txt 
+                                                            #匹配的第二个root被替换
+  部分删除
+[root@A /]# sed    '1 s/root//g'  /opt/a.txt  
+
+[root@A /]# sed  -r  '2,3 s/^/#/'  /opt/a.txt  #添加注释  
+[root@A /]# sed  -ir '2,3 s/^/#/'  /opt/a.txt  #修改文件添加注释
+[root@A /]# cat  /opt/a.txt               
+
+[root@A /]# sed  -r  '2,3 s/^#//'  /opt/a.txt   #去除注释
+
+  特殊的替换
+
+[root@A /]# sed   '1 s#/bin/bash#/sbin/nologin#'  /opt/a.txt
+
+[root@A /]# sed   '1 s,/bin/bash,/sbin/nologin,'  /opt/a.txt
+
+
+
+
+  扩展正则的替换
+[root@A /]# head -4 /etc/passwd > /opt/c.txt
+[root@A /]# cat /opt/c.txt
+
+[root@A /]# sed -r  's/^/A/' /opt/c.txt   #每一行开头加上A
+[root@A /]# sed -r  's/^./A/' /opt/c.txt  #每一行开头字符替换为A
+
+
+
+  ( ):将内容组合成整体,保留
+
+每一行的第二个字符,替换 成大写A
+
+[root@A /]# sed -r 's/(^.)(.)(.*)/\1A\3/'  /opt/c.txt 
+
+[root@A /]# sed -r 's/(^.)(.)(.*)/\1\2\3/'  /opt/c.txt 
+
+[root@A /]# sed -r 's/(^.)(.)(.*)/\1\2A/'  /opt/c.txt 
+
+[root@A /]# sed -r 's/(^.)(.)(.*)/\2A/'  /opt/c.txt 
+
+每一行的第1个字符与最后一个字符 对调
+ 
+[root@A /]# sed -r   's/(^.)(.*)(.$)/\3\2\1/'   /opt/c.txt  
+
+[root@A /]# sed -r   's/(^.)(.*)(.$)/\1/'   /opt/c.txt  
+
+[root@A /]# sed -r   's/(^.)(.*)(.$)/\2/'  /opt/c.txt 
+
+############################################################
+删除每行第二个字符和最后一个字符
+
+[root@A /]# cat /etc/hosts
+
+[root@A /]# sed  -r  's/(^.)(.)(.*)(.$)/\1\3/'   /etc/hosts
+
+每行第二个字符和第一个字符对调
+[root@A /]# sed  -r  's/(^.)(.)(.*)/\2\1\3/'  /etc/hosts
+
+删除每行的所有数字
+[root@A /]# sed -r 's/[0-9]//g'  /etc/hosts
+
+每一行开头前面加上一些空格
+[root@A /]# sed -r 's/^/     /'  /etc/hosts
+
+每一行的大写字母,加上括号
+[root@A /]# cp  /etc/hosts    /opt/test.txt
+[root@A /]# sed   -ri  's/l/L/g'   /opt/test.txt  
+                                                                              #将所有的 l 替换成  L
+[root@A /]# cat  /opt/test.txt
+[root@A /]# sed -r 's/([A-Z])/(\1)/g'  /opt/test.txt
+
+[root@A /]# sed -ri 's/([A-Z])/(\1)/g'  /opt/test.txt
+[root@A /]# cat  /opt/test.txt
+
+
+
+
+################################################################
+sed 导入:
+[root@A /]# head -3 /etc/passwd > /opt/b.txt
+[root@A /]# sed -i '$r /etc/redhat-release'   /opt/b.txt 
+[root@A /]# cat  /opt/b.txt 
+   在/opt/b.txt 最后一行 读入/etc/redhat-release全部内容
+
+[root@A /]# sed -i '2r /etc/redhat-release'   /opt/b.txt
+   在/opt/b.txt 第二行 读入/etc/redhat-release全部内容
+
+sed 另存为:
+[root@A /]# sed  -i '2,3w /opt/23.txt'  /opt/b.txt
+将/opt/b.txt 第二行到第三行 另存为/opt/23.txt
+[root@A /]# cat  /opt/23.txt
+
+[root@A /]# sed -n  '2,3p'  /opt/b.txt > /opt/23.txt
+[root@A /]# cat  /opt/23.txt
+
+
+
+#################################################################
+
+
+ 1. 找到所有使用bash的用户
+[root@A /]# grep  'bash$'  /etc/passwd  >  /opt/user.txt
+
+2.提取所有用户名
+
+ for  i   in  `cat  /opt/user.txt`
+ do
+ echo ${i%%:*} >> /opt/name.txt
+ done
+ 
+3.提取所有用户的密码信息
+
+  for  x  in   `cat  /opt/name.txt`
+   do
+      tmp=`sed  -n   '/^$x/p'  /etc/shadow`
+      tmp1=`echo ${tmp#*:}`
+      tmp2=`echo ${tmp1%%:*}`
+      echo $x ---> $tmp2  >> /opt/getupwd.log
+   done
+
+[root@A /]# cat /root/getupwd.sh
+#!/bin/bash
+
+#找到所有使用bash的用户
+grep  'bash$'  /etc/passwd  >  /opt/user.txt
+
+#提取所有用户名
+for  i   in  `cat  /opt/user.txt`
+do
+ echo ${i%%:*} >> /opt/name.txt
+done
+
+#提取所有用户的密码信息
+for  x  in   `cat  /opt/name.txt`
+  do
+     tmp=`sed  -rn   '/^$x/p'  /etc/shadow`
+     tmp1=`echo ${tmp#*:}`                        #掐头
+     tmp2=`echo ${tmp1%%:*}`                      #去尾
+     echo $x '--->' '$tmp2'  >> /opt/getupwd.log
+ done
+
+################################################################
+
+统计文件的行数
+
+[root@A /]# cat /etc/passwd  |  wc -l
+
+[root@A /]# sed -n '$=' /etc/passwd
+
+
+  n:直接读入下一行内容,并且对下以行不做任何操作
+
+[root@A /]# sed -n  'p;n'  /opt/d.txt    #输出基数行
+
+[root@A /]# sed -n  'n;p'  /opt/d.txt    #输出偶数行
+
+
+#################################################################
+sed 模式空间与保持空间
+
+ H  由 模式空间--------->保持空间  追加写入
+ h  由 模式空间--------->保持空间  覆盖写入
+
+ G  由 保持空间--------->模式空间  追加写入
+ g  由 保持空间--------->模式空间  覆盖写入
+
+[root@A ~]# seq 10 > /opt/a.txt
+[root@A ~]# cat /opt/a.txt
+
+[root@A ~]# sed  '3h;5g'  /opt/a.txt
+
+[root@A ~]# sed '1h;2H;3H;10G'  /opt/a.txt
+[root@A ~]# sed '1h;1d;2H;2d;3H;3d;10G'  /opt/a.txt
+[root@A ~]# sed '1h;1d;2,3H;2,3d;10G' /opt/a.txt
+
+  h:将内容复制到剪切板（覆盖）      g:将剪切板内容进行粘贴（覆盖） 
+  H:将内容复制到剪切板（追加）      G:将剪切板内容进行粘贴（追加）
+
+
+
+
+
+#################################################################
+awk 格式：以列的方式匹配
+
+  awk  [选项]   '条件 { 动作}'     文件
+
+      动作：print 输出
+      条件:支持正则  /正则表达式/
+
+[root@A ~]# head -8 /etc/passwd > /opt/test.txt 
+[root@A ~]# cat  /opt/test.txt
+
+[root@A ~]# awk -F  ":"  '{print $1}'  /opt/test.txt 
+[root@A ~]# awk -F  ":"  '{print $2}'  /opt/test.txt 
+[root@A ~]# awk -F  ":"  '{print $3}'  /opt/test.txt 
+[root@A ~]# awk -F  ":"  '{print $7}'  /opt/test.txt 
+
+[root@A ~]# awk -F  ":"  '{print $1,$3,$7}'  /opt/test.txt 
+
+提取根分区的使用量：
+[root@A ~]# df -h
+[root@A ~]# df -h  |  head -2  |  tail -1  |  awk  '{print $5}'
+[root@A ~]# df -h  |  sed -n '2p'
+[root@A ~]# df -h  |  sed -n '2p' | awk  '{print $5}'
+[root@A ~]# df -h  |  awk '/\/$/{print $5}'   #正则匹配
+
+
+[root@A ~]# awk -F "/"  '{print NR,$0}'  /etc/shells
+[root@A ~]# awk -F "/"  '{print NF,$0}'  /etc/shells
+
+[root@A ~]# awk -F "/"  '{print "第"NR"行","有"NF"列",$0}'  /etc/shells 
+
+  常量必须用英文的双引号
+ NR：代表行数
+ NF：代表列数
+  $0：整行所有内容
+
+
+[root@A ~]# awk -F  "/"  '{print $NF}'  /etc/shells 
+        输出文本文件内容的最后一列
+
+################################################################
+处理时机
+
+BEGIN{} : 在处理文件之前，进行的操作执行一次，一般用于定义初始变量，初始化
+
+ {}: 执行N次，取决于处理的行数
+
+END{} : 在处理文件之后，进行的操作执行一次，一般用于总结
+
+awk -F 分隔符   'BEGIN{} {} END{}' 文件
+
+以bash结尾的个数
+# awk -F ":" 'BEGIN{i=0} /bash$/{i++} END{print i}' /etc/passwd
+
+以nologin结尾的个数
+# awk -F ":" 'BEGIN{i=0} /nologin$/{i++} END{print i}' /etc/passwd
+
+
+# awk  'BEGIN{print "nsd1708"}' 
+
+
+# awk -F ":" 'BEGIN{i=0} /bash$/{i++；print $1}END{print i}' /etc/passwd
+
+
+    格式化输出/etc/passwd文件中的用户名、UID、宿主目录信息
+
+# awk -F ":" 
+ 'BEGIN{print   "User"   "\t"   "UID"   "\t"   "Home"}
+  {print  $1   "\t"   $3    "\t"   $6}
+  END{print   "一共有"     NR    "行"}'   /etc/passwd
+
+
+  \t：输出一个tab距离
+
+
+##############################################################
+ 条件表现的形式
+
+1.正则表达式
+   /正则表达式/{print $1}
+
+   $7~/正则表达式/{print $1}     第7列匹配正则
+   $7!~/正则表达式/{print $1}     第7列不匹配正则
+
+[root@A ~]# awk -F ":"  '$7~/bash$/{print $1,$3}' /etc/passwd
+
+2.数值比较(NR代表行数)
+
+  == 等于   ！=不等于      >大于     < 小于       >= 大于等于      <=小于等于 
+
+[root@A ~]# awk -F  ":"  '$3>=1000{print $1,$3}'    /etc/passwd
+[root@A ~]# awk -F  ":"  '$3==1000{print $1,$3}'    /etc/passwd
+[root@A ~]# awk -F  ":"  '$1=="root"{print $1,$3}'  /etc/passwd
+
+[root@A ~]# awk -F  ":"  'NR==10{print $1,$3}'      /etc/passwd
+
+3.逻辑  与&&      逻辑  或||
+
+[root@A ~]# awk -F ":" '$3==1||$3==7{print $1,$3}'  /etc/passwd
+[root@A ~]# awk -F ":" '$3>=0&&$3<=7{print $1,$3}'  /etc/passwd
+
+
+
+
+
+4.运算  +  -  *  /  %    ++  --
+
+[root@A ~]# seq 100 | awk '$1%7==0&&$1~/7/{print $1}' 
+
+[root@A ~]# awk -F ":" '$3>=1000&&$3<=1005{print $1,$3}' /etc/passwd
+
+[root@A ~]# echo 192.168.4.110  www.haha.com >> /etc/hosts
+[root@A ~]# ping www.haha.com    #测试主机名解析
+
+[root@A ~]# awk '/^127/||/^192/{print $0}' /etc/hosts
+
+[root@A ~]# awk '/^127|^192/{print $0}' /etc/hosts
+
+
+
+
+
+##################################################################     
+
+ -v:调用外部Shell变量
+
+本案例要求编写脚本getupwd-awk.sh，实现以下需求：
+    找到使用bash作登录Shell的本地用户
+    列出这些用户的shadow密码记录
+    按每行“用户名 --> 密码记录”保存到/opt/getupwd.log
+
+#!/bin/bash
+#找到使用bash作登录Shell的本地用户
+
+ for i  in  `awk  -F  ":"  '/bash$/{print $1}'  /etc/passwd`
+ do
+
+    pass=`awk  -v a=$i  -F ":"  '$1==a{print $2}'  /etc/shadow`
+
+    echo   $i '--->' $pass 
+
+ done
+
+
+
+
+
+
+
+#################################################################
+
+awk高级使用：
+
+双分支
+
+  if(条件){编辑指令1}else{编辑指令2}
+
+
+ 统计UID小于等于1000的用户个数
+ 统计UID大于1000的用户个数
+
+[root@A ~]# awk -F ":"  
+
+ 'BEGIN{a=0;b=0} {if($3<=1000){a++}else{b++}} END{print a,b}' 
+
+ /etc/passwd
+
+################################################################
+
+  awk数组:存放多个值
+
+    定义数组：  数组名[下标]=值          #下表可以为字符串
+    调用数组：  数组名[下标]
+    遍历数组： for ( 变量  in 数组名){print  数组名[变量] }
+
+
+   for ( i in b ){print  b[i] }    #i循环的是b数组的下标 
+     
+
+
+# cat /opt/ip.txt
+192.168.4.11
+1.2.3.4
+200.0.0.1
+192.168.4.11
+192.168.4.10
+1.2.3.4
+1.2.3.4
+1.2.3.4
+
+# awk   '{ip[$1]++}END{for(i in ip){print i,ip[i]}}'  /opt/ip.txt 
+
+#########################################################
+    运维01   运维02 （搭建Yum 源码包编译安装  配置IP地址）
+
+#########################################################
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
++
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,54 @@
+一、部署数据分片服务器
+1.1 拓扑结构
+1.2 ip规划
+1.3 软件介绍
+1.4 部署数据分片服务器
+装包
+   43  rpm -qa  | grep -i jdk
+   44  java -version
+   45  tar -zxvf Mycat-server-1.4-beta-20150604171601-linux.tar.gz 
+   48  mv mycat  /usr/local/
+   49  cd /usr/local/mycat/
+]# ls
+bin  catlet  conf  lib  logs  version.txt
+休息 10分钟到  16：06
+
+修改配置文件 具体操作见TMOOC
+
+
+休息 10分钟到  17：10
+在2台数据库服务器上做相应的配置
+]# vim /etc/my.cnf
+[mysqld]
+lower_case_table_names = 1 
+:wq
+]# systemctl restart mysqld
+
+]# mysql -uroot -p密码
+mysql> grant all on *.* to plj@"%" identified by "123qqq...A";
+
+启动服务
+]#/usr/local/mycat/bin/mycat status
+]#/usr/local/mycat/bin/mycat start
+]# netstat -utnlp | grep  :8066
+
+1.5 在客户端50主机测试配置
+client50 ~]# mysql -h192.168.4.56 -P8066 -uadmin -p123456
+mysql> show databases;
+mysql> use TESTDB;
+mysql> show tables;
+mysql> create table  employee(
+    -> id int primary key auto_increment,
+    -> name char(10),age int,sharding_id int);
+
+二、mysql优化 192.168.4.50
+
+
+
+
+
+
+
+
+
+

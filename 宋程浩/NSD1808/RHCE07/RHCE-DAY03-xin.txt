@@ -1,0 +1,449 @@
+四、配置文件服务器/客户端——
+
+8、通过Samba发布共享目录
+用途：提供共享文件夹
+协议：SMB（TCP 139）、CIFS（TCP 445）
+    CIFS，Common Internet File System，通用网际文件系统 —— TCP 445
+    SMB，Server Message Block，服务消息块 —— TCP 139
+软件包（S）：samba
+软件包（C）：samba-client、cifs-utils
+系统服务：smb
+
+系统账号：/etc/passwd记录的用户账号
+samba用户：专用来访问共享文件夹的用户。存放在独立的账号数据库文件里的用户账号，必须有同名的系统账号（方便给权限）
+使用pdbedit管理工具
+pdbedit  -a  用户名  添加用户
+pdbedit  -L  [用户名]  查询用户
+pdbedit  -x  用户名  删除用户
+
+配置文件 /etc/samba/smb.conf： 【man  smb.conf】
+[global]  //全局配置
+      共享服务器的全局设置。。。
+      workgroup  =  工作组名
+[homes]
+      本地用户家目录的隐藏共享。。。
+      browseable = no
+[printers]
+      打印机共享设置
+[共享名]
+     配置语句 =  值
+     path  =  文件夹路径    
+     comment = 说明文字
+     browseable = yes|no     //用来指定该共享是否可以浏览，默认为yes
+     public = no|yes            //用来指定该共享是否允许guest账户访问,默认为no
+     read only = yes|no          //默认yes
+     valid  users =  用户1  用户2  .. ..   //默认任何用户
+     write list = 用户1  用户2   //用来指定可以在该共享下写入文件的用户，默认无
+     hosts  allow  =  客户机1  网段1  .. ..
+     hosts  deny  =  客户机1  网段1  .. ..
+
+
+SELinux预设策略的开关控制（布尔值）：
+查看SELinux开关
+getsebool  -a  | grep  samba_ex
+控制SELinux开关（-P选项才能实现永久设置）  
+setsebool  -P  samba_export_all_rw=on
+
+测试Samba共享资源：
+smbclient  -L  服务器地址 	【密码为空（直接回车）】
+smbclient  -U  用户名  //服务器地址/共享名 【需要密码】
+
+一、搭建基本samba服务
+1.安装samba软件包
+#yum -y install samba
+2.创建samba的共享账号。与系统相同用户名，
+#useradd harry
+3.添加samba账号，设置密码
+#pdbedit -a harry  //添加harry用户，设置密码
+#pdbedit  -L  //列出所有有效samba账号
+
+4.装包配置起服务  /etc/samba/smb.conf
+[global]  //全局设置
+    workgroup = 工作组名
+......
+[自定共享名]
+  path=共享的绝对路径
+ public=no | yes  //默认为no
+  workgroup = STAFF
+[common]  // 共享名
+  path = /common  //共享实际路径
+
+#mkdir  /common
+#ech0 haha > /common/abc.txt
+
+5.重启smb服务，设置为开机自启
+
+虚拟机Desktop0
+所需软件包：samba-client
+[root@desktop0 /]#smbclient -L //172.25.0.11
+[root@desktop0 /]#smbclient -U  harry  //172.25.0.11/common
+
+思路：客户端访问服务端资源
+1.防火墙是否限制
+2.服务本身的访问控制
+3.SELinux 是否限制
+
+SElinux：布尔值 逻辑上的真假，只有两个值。（功能的开关on | off）
+#getsebool -a
+#getsebool -a  | grep  samba
+#setsebool  -P samba_export_all_ro=on
+[root@desktop0 /]#mkdir /mnt/samba
+[root@desktop0 /]#yum -y installl cifs-utils
+[root@desktop0 /]#mount -o  username=harry,password=123   //172.25.0.11  /mnt/samba [临时]
+[root@desktop0 /]#umount /mnt/samba
+[root@desktop0 /]#vim /etc/fstab
+//172.25.0.11/common  /mnt/samba   cifs    username=harry,password=123,_netdev 0 0
+[root@desktop0 /]#mount -a
+[root@desktop0 /]#df -Th
+
+二、配置多用户Samba挂载
+
+.. ..
+被挂载的设备    挂载点   文件系统类型   挂载参数  0  0
+//172.25.0.11/devops    /mnt/dev        cifs    
+
+username=kenji,password=atenorth,multiuser,sec=ntlmssp,_netdev 0 0
+
+# su - chihiro
+# cifscreds  add  server0
+Password: 共享账号chihiro的密码
+# touch  /mnt/dev/a.txt
+
+1.修改配置文件/etc/samba/smb.conf
+#vim /etc/samba/smb.conf
+[devops]
+    path = /devops
+    write list  = chihiro 
+#mkdir /devops
+#echo haha > /devops/123.txt
+2.重启smb服务
+#systemctl restart smb
+3.客户端验证
+[root@desktop0 /]#smbclient -L  //172.25.0.11
+4.客户端挂载验证
+[root@desktop0 /]#mkdir /mnt/dev
+[root@desktop0 /]#vim /etc/fstab
+//172.25.0.11/devops /mnt/dev cifs  username=chihiro,password=123,_netdev 0 0
+[root@desktop0 /]# df -Th
+[root@desktop0 /]# mount -a 
+[root@desktop0 /]# df -Th
+
+5.实现samba共享的其他操作
+思路：客户端访问服务端资源
+a.防火墙是否限制
+b.服务本身的访问控制
+c.SELinux 是否限制
+
+
+#getsebool -a | grep samba
+#setsebool -P samba_export_all_rw=on
+#getsebool -a | grep samba
+#chmod o+w  chihiro
+比较不安全。现在chihiro有了写的权限。其他人也同样拥有写的权限
+#setfacl -m u:chihiro:rwx  /devops
+#getfacl /devops
+在desktop上操作#touch /mnt/dev/test.txt
+
+6.multiuser多用户访问
+我们的普通用户设计，实现普通用户可以切换用户。读。
+
+-管理员只需要作一次挂载
+-客户端在访问挂载点时，若需要不同权限，可以临时切换为新的共享用户（无需重新挂载）
+实现方式：
+1.挂载SMB共享时启用multiuser支持
+2.使用cifscreds临时切换身份
+
+multiuser 提供对客户端多个用户身份的区分支持
+sec=ntlmssp 提供NT局域网管理安全支持
+
+在desktop上操作#vim /etc/fstab
+//172.25.0.11/devops /mnt/dev cifs  username=kenji,password=123,_netdev,multiuser,sec=ntlmssp 0 0
+[root@desktop0 /]# umount /mnt/dev/
+[root@desktop0 /]# mount -a
+[root@desktop0 /]# df -h
+
+验证：
+[root@desktop0 /] #su - student
+[root@desktop0 /]#cifscreds add -u chihiro  172.25.0.11
+[root@desktop0 /]#touch haha.txt
+
+10、配置NFS共享服务
+
+用途：Network File System 提供共享文件夹
+软件包（S）：nfs-utils
+软件包（C）：nfs-utils
+共享配置文件：/etc/exports
+文件夹路径	客户机1(权限,ro)  客户机2(rw)....
+
+重新读取配置：exportfs  -rv
+
+
+配置普通NFS共享（只支持客户机访问控制） ——
+系统服务（S）：nfs-server
+系统服务（C）：--
+# vim  /etc/exports
+/public         172.25.0.0/24(ro)
+
+
+配置安全NFS共享（增加了对用户验证和加密的支持）：
+系统服务（S）：nfs-secure-server
+系统服务（C）：nfs-secure
+
+# vim  /etc/exports
+/protected      *(rw,sec=krb5p)
+
+Kerberos认证/加密：一次认证（获取通行证），多次免密登录
+客户机密钥部署位置：/etc/krb5.keytab
+
+测试用户：ldapuser0、ldapuser1
+密码：kerberos
+11、挂载NFS共享
+出有哪些NFS共享：
+showmount  -e  [服务器地址]
+
+如何访问NFS共享目录：
+mount   服务器地址:文件夹路径   本地挂载点
+
+
+# vim  /etc/fstab
+172.25.0.11:/protected	/mnt/nfssecure	nfs sec=krb5p,_netdev 0 0
+
+搭建基本的只读NFS服务
+1.在server0上，检测包是否安装。
+#rpm -q  nfs-utils 
+#systmctl status nfs-server
+2.修改配置文件/etc/exports [默认是空的]
+#mkdir  /public
+#echo  hehe > /public/nsd.txt
+#vim /etc/export
+文件夹路径   客户机地址（权限）  客户机地址（权限）
+/public  172.25.0.0/24（ro）
+
+3.重启服务
+#systemctl restart nfs-server
+#systemctl enable nfs-server
+
+4.访问nfs-server服务
+[root@desktop0 /]# mkdir  /mnt/nfs
+[root@desktop0 /]# showmount -e 172.25.0.11
+[root@desktop0 /]#vim /etc/fstab
+172.25.0.11:/public  /mnt/nfs  nfs _netdev  0 0
+############################
+读写nfs-server服务
+1.客户端root用户的读写
+#mkdir  /abc
+#vim /etc/export
+/abc  172.25.0.11(rw) 
+
+.客户端
+[root@desktop0 /]#mkdir /mnt/nsd
+[root@desktop0 /]#vim /etc/fstab
+172.25.0.11:/abc  /mnt/nsd   nfs  _netdev 0 0
+[root@desktop0 /]#mount -a
+[root@desktop0 /]#df -Th
+[root@desktop0 /]#touch /mnt/nsd/a.txt
+touch:无法创建
+服务端
+#setfacl  -m  u:nfsnobody  /abc
+#setfacl -b /abc
+#vim /etc/export
+/abc  172.25.0.11(rw,no_root_squash)
+#systemctl restart nfs-server 
+
+[root@desktop0 /]#systemctl  restart nfs
+[root@desktop0 /]#touch  /mnt/nsd/a.txt
+
+2.普通用户的读写
+客户端普通用户访问服务端nfs-server服务，服务端会以客户端相同UID身份的本地用户进行权限判定。
+#useradd -u 1500 tom
+[root@desktop0 /]#useradd -u 1500 dayu
+#setfacl -m u:tom:rwx  /abc
+[root@desktop0 /]#su  - dayu
+[root@desktop0 /]$touch /mnt/nsd/a1.txt
+
+
+
+
+LDAP ：提供网络用户
+kerberos：密码验证
+作为普通NFS的增强版，结合LDAP+kerberos技术，实现认证和加密支持。同一个kerberos领域内，认证用户可实现“一次密码认证，多次免密登录”的通行机制。
+
+服务端
+#lab nfskrb5 setup
+#grep ldapuser0 /etc/passwd
+#id ldapuser0
+1.部署kerberos加密的秘钥文件
+#wget http://classroom/pub/keytabs/server0.keytab  -O  /etc/krb5.keytab
+2.修改配置文件
+#vim  /etc/exports
+/abc  172.25.0.0/24（rw，no_root_squash,sec=krb5p）
+3.重启nfs-server与nfs-secure-server
+#systemctl restart  nfs-server nfs-secure-server
+
+客户端：
+1.部署kerberos加密的秘钥文件
+[root@desktop0 /]#lab nfskrb5 setup
+[root@desktop0 /]#grep ldapuser0 /etc/passwd
+[root@desktop0 /]#id ldapuser0
+[root@desktop0 /]#wget http://classroom/pub/keytabs/desktop0.keytab  -O  /etc/krb5.keytab
+2.修改/etc/fstab
+[root@desktop0 /]#vim /etc/fstab	
+172.25.0.11:/abc  /mnt/nsd  nfs  _netdev,sec=krb5p 0 0
+3.重启nfs与nfs-secure服务
+[root@desktop0 /]#systemctl restart  nfs  nfs-secure
+4.验证挂载
+[root@desktop0 /]#mount -a
+
+19、配置iSCSI服务器
+20、配置iSCSI客户端
+iSCSI，网络磁盘		千兆以太网
+软件包（S）：targetcli
+软件包（C）：iscsi-initiator-utils
+
+后端存储 backstore：
+    服务端实际提供的存储设备（磁盘、分区、文件.. ..）
+ISCSI 存储对象：
+    软件逻辑上定义的一个网络磁盘target
+LUN 逻辑单元：
+    软件逻辑上定义的到后端存储的一个映射
+IQN名称（ISCSI Qualified Name）：
+     iqn.yyyy-mm.反序区域名:自定义标记
+
+如何发布一个ISCSI磁盘 ——
+1. 定义一个后端存储设备
+2. 创建一个ISCSI对象（IQN名称）
+        iqn.2016-02.com.example:server0
+3. 为ISCSI对象添加LUN对应到后端存储 【luns】
+4. 为ISCSI对象指定允许访问的客户机标识（IQN名称） 【acls】
+        iqn.2016-02.com.example:desktop0
+5. 为ISCSI对象指定监听的地址、端口 【portals】
+
+如何访问一个ISCSI磁盘 ——
+1. 准备工作（初始化、引爆）
+1）为客户机标识IQN名称
+    # vim  /etc/iscsi/initiatorname.iscsi
+    InitiatorName=本机的IQN名称
+    # systemct  restart  iscsi
+2）查找ISCSI磁盘
+    iscsiadm  -m  discovery  -t  st  -p  服务器地址
+3）连接ISCSI磁盘
+    iscsiadm  -m  node  -T  ISCSI磁盘的IQN名称  -l
+			【-l、-u、-o  delete】
+2. 使用磁盘
+识别、分区、格式化、挂载
+
+
+iSCSI磁盘的开机自动连接：
+# vim  /var/lib/iscsi/nodes/..../default
+//查找startup
+node.conn[0].startup = automatic
+
+# systemctl  enable  iscsi   iscsid
+
+
+问题（当前版bug）：iSCSI客户机配好之后，重启或关机会卡死
+解决：sync ;  poweroff  -f
+
+# vim  /etc/bashrc
+.. ..
+alias  reboot='sync ; reboot -f'
+#####################################################
+
+本地存储： 
+  IDE、SATA、SCSI、SAS磁盘
+网络存储：
+  主机系统程序==》Internet网络==》iSCSI磁盘（其他主机上）
+
+Linux主机如何提供一个iSCSI网络存储？——iSCSI服务端
+1）前提：准备空闲的物理存储设备（磁盘/分区）
+#fdisk  /dev/vdb
+#partprobe /dev/vdb
+
+软件包：targtcli
+配置工具：targetcli
+系统服务:target
+#yum -y install targetcli
+
+2）命名backstore：后端存储，为我们实际的物理存储设备起的逻辑的名称。
+
+/backstores/block create 后端存储名 实际物理存储设备路径
+#targetcli
+> /backstores/block create disk1  /dev/vdb1
+>/backstores/block delete disk1
+
+3）创建一个target：包含多个磁盘设备的逻辑磁盘柜，作为客户机访问的对象。
+>/iscsi  create 磁盘名
+>/iscsi  create  iqn.2016-02.com.example:server0
+
+4）配置磁盘柜（luns【逻辑单元】、acls【给谁用】、portals【访问磁盘柜，通过哪个IP、哪个端口】）
+>/iscsi/iSCSI磁盘名<TAB>.../luns create /backstores/block/后端存储名
+>/iscsi/iSCSI磁盘名<TAB>..../acls  create 客户端的IQN标记
+>/iscsi/iSCSI磁盘名<TAB>...../portals create 本机IP地址  [端口 ]
+
+> /iscsi/iqn.2016-02.com.example:server0/tpg1/luns create /backstores/block/disk1 
+> /iscsi/iqn.2016-02.com.example:server0/tpg1/acls  create  iqn.2016-02.com.example:desktop0
+> /iscsi/iqn.2016-02.com.example:server0/tpg1/portals  create 172.25.0.11
+> exit
+
+
+关于IQ命名规范（ISCSI Qualified Name）：
+iqn.yyyy-mm.倒序域名:自定义标记
+
+适用于ISCSI网络存储、acls指定的客户机标记
+
+Linux主机如何连接一个iSCSI网络存储——iSCSI客户机
+
+客户端访问
+软件包：iscsi-initiator-utils
+管理工具：iscsiadm
+系统服务：iscsid（加载客户端IQN标记）、iscsi（识别并连接iSCSI设备）
+
+# rpm -qa| grep  iscsi*
+#yum -y install  iscsi-initiator-utils
+#vim /etc/iscsi/initiatorname.iscsi
+InitiatorName=客户机的IQN名称
+InitiatorName=iqn.2016-02.com.example:desktop0
+#systemctl restart iscsid
+
+发现iSCSI存储设备
+#iscsiadm -m discovery -t  sendtargets -p 服务器地址
+sendtargets可简写为st
+#iscsiadm -m discovery -t  sendtargets -p 172.25.0.11
+
+连接iSCSI存储设备
+#iscsiadm -m node  -T iSCSI设备的iqn名称 -l  【-u】
+或者
+#iscsiadm -m node -L all   【-U】  
+
+配置自动连接已经发现过的iSCSI存储设备：
+#vim /var/lib/iscsi/nodes.....<tab>
+把第二个startup的值改为automatic
+node.conn[0].startup=automatic
+#systemctl enable iscsi
+
+
+测试iSCSI设备的链接结果：
+#lsblk
+
+分区、格式化、挂载
+#fdisk /dev/sda
+n p e +2100M w
+#partprobe /dev/sda
+#mkfs.ext4 /dev/sda1
+#mkdir /mnt/data
+#vim /etc/fstab
+/dev/sda1 /mnt/data ext4 _netdev 0 0 
+#mount -a
+#df -Th /mnt/data
+
+关于iSCSI设备在/etc/fstab中的挂载
+#blkid /dev/sda1 
+UUID=.....  【UUID是文件系统被格式化的时候生成的】
+
+关于iSCSI客户机重启死机的问题。
+reboot关机卡死
+解决办法： sync;reboot -f 代替reboot命令
+#vim /etc/bashrc
+......
+alias  reboot=‘ sync;reboot -f ’
+#source   /etc/bashrc
